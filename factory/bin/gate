@@ -42,10 +42,19 @@ def git(worktree, *args):
 
 def protected_changes(worktree):
     """Files under protected_paths that the branch added, modified or deleted."""
-    diff = git(worktree, "diff", "--name-status", f"origin/{CONFIG['base_branch']}...HEAD")
+    # -z: NUL-separated, unquoted paths, so names with special characters can't
+    # dodge the patterns. Records are STATUS\0PATH\0, or for renames and copies
+    # STATUS\0OLD\0NEW\0.
+    out = git(worktree, "-c", "core.quotePath=false", "diff", "--name-status", "-z",
+              f"origin/{CONFIG['base_branch']}...HEAD")
+    fields = out.split("\0")
     hits = []
-    for line in diff.splitlines():
-        status, *paths = line.split("\t")
+    i = 0
+    while i < len(fields) and fields[i]:
+        status = fields[i]
+        count = 2 if status[0] in "RC" else 1
+        paths = fields[i + 1:i + 1 + count]
+        i += 1 + count
         # Check both sides of a rename or copy: moving a file into or out of a
         # protected path changes the control plane too.
         for path in paths:
