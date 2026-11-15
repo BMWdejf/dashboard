@@ -32,3 +32,14 @@ model ExampleData {
   @@index([section, position])
   @@map("examples_data")
 }
+
+/// Per-user UI settings. `userId` is the Neon Auth user id (neon_auth.user.id);
+/// no foreign key, because Prisma doesn't manage the neon_auth schema.
+model UserPreference {
+  userId    String   @id @map("user_id")
+  /// dark | light | system
+  theme     String   @default("dark")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("user_preferences")
+}

@@ -106,8 +106,8 @@ export default async function DashboardPage() {
                 label="Tržby a náklady po měsících"
                 labels={data.revenue.map((r) => r.label)}
                 series={[
-                  { label: 'Tržby', color: '#cb3cff', values: data.revenue.map((r) => r.revenue) },
-                  { label: 'Náklady', color: '#21c3fc', values: data.revenue.map((r) => r.expenses) },
+                  { label: 'Tržby', color: 'var(--chart-1)', values: data.revenue.map((r) => r.revenue) },
+                  { label: 'Náklady', color: 'var(--chart-2)', values: data.revenue.map((r) => r.expenses) },
                 ]}
                 formatTick={(n) => fmtMoneyCompact(n)}
               />

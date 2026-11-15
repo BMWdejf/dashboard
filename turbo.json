@@ -17,7 +17,8 @@
       "env": [
         "NEON_AUTH_BASE_URL",
         "NEON_AUTH_COOKIE_SECRET",
-        "DATABASE_URL"
+        "DATABASE_URL",
+        "NODE_ENV"
       ]
     },
     "check-types": {

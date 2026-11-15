@@ -58,6 +58,15 @@ and card specs). The tokens live in `apps/web/app/globals.css`:
 - `--shadow-card`, `--space-grid` (28px), `--radius-*`, `--font-display`
   (Plus Jakarta Sans), `--font-ui` (Inter). The design is dark-only.
 
+**Light theme** comes from `design/figma/DESIGN light mode.md` and overrides the
+same tokens under `:root[data-theme='light']` (and `[data-theme='system']` when
+the OS prefers light). Never hard-code a colour in a component: add a token
+(e.g. `--color-card`, `--chart-1..3`, `--trend-up-*`, `--badge-ok-*`,
+`--color-on-accent` for text on the gradient) and give it a value in both
+themes. SVG charts take colours through `style`/classes, not attributes, so
+`var()` works. The user's choice (dark | light | system) lives in
+`user_preferences` and the `theme` cookie; see `apps/web/lib/theme.ts`.
+
 In `Colors.json` the primary swatch is labelled `#6C72FF` but filled `#cb3cff`;
 DESIGN.md confirms `#cb3cff` is primary and `#6c72ff` secondary.
 

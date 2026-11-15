@@ -9,7 +9,6 @@
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-ui);
-  color-scheme: dark;
 }
 
 .visuallyHidden {
@@ -213,7 +212,7 @@ a.navItem:hover {
   border: none;
   border-radius: var(--radius-control);
   background: var(--gradient-primary);
-  color: var(--color-text);
+  color: var(--color-on-accent);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -265,8 +264,8 @@ a.navItem:hover {
 .exampleTag {
   padding: 2px 8px;
   border-radius: var(--radius-badge);
-  background: rgba(253, 181, 42, 0.12);
-  color: var(--color-warning);
+  background: var(--badge-warn-bg);
+  color: var(--badge-warn-fg);
   font-size: 11px;
   font-weight: 500;
 }
@@ -308,7 +307,7 @@ a.navItem:hover {
   padding: 20px;
   border: 0.6px solid var(--color-border);
   border-radius: var(--radius-card);
-  background: var(--color-bg);
+  background: var(--color-card);
   box-shadow: var(--shadow-card);
 }
 
@@ -351,15 +350,15 @@ a.navItem:hover {
 }
 
 .trendUp {
-  border: 0.6px solid rgba(33, 195, 252, 0.3);
-  background: rgba(33, 195, 252, 0.12);
-  color: var(--color-info);
+  border: 0.6px solid var(--trend-up-border);
+  background: var(--trend-up-bg);
+  color: var(--trend-up-fg);
 }
 
 .trendDown {
-  border: 0.6px solid rgba(255, 107, 138, 0.3);
-  background: rgba(255, 107, 138, 0.12);
-  color: var(--color-danger);
+  border: 0.6px solid var(--trend-down-border);
+  background: var(--trend-down-bg);
+  color: var(--trend-down-fg);
 }
 
 .legend {
@@ -385,11 +384,24 @@ a.navItem:hover {
 }
 
 .legendRevenue {
-  background: var(--color-accent);
+  background: var(--chart-1);
 }
 
 .legendExpenses {
-  background: var(--color-info);
+  background: var(--chart-2);
+}
+
+/* Chart strokes and fills follow the theme */
+.seriesPrimary {
+  stroke: var(--chart-1);
+}
+
+.seriesSecondary {
+  stroke: var(--chart-2);
+}
+
+.gaugeTrack {
+  stroke: var(--chart-track);
 }
 
 /* Charts */
@@ -400,7 +412,7 @@ a.navItem:hover {
 }
 
 .gridLine {
-  stroke: var(--color-surface);
+  stroke: var(--chart-grid);
   stroke-dasharray: 4 4;
 }
 
@@ -540,13 +552,13 @@ a.navItem:hover {
 }
 
 .badgePaid {
-  background: rgba(33, 195, 252, 0.12);
-  color: var(--color-info);
+  background: var(--badge-ok-bg);
+  color: var(--badge-ok-fg);
 }
 
 .badgePending {
-  background: rgba(253, 181, 42, 0.12);
-  color: var(--color-warning);
+  background: var(--badge-warn-bg);
+  color: var(--badge-warn-fg);
 }
 
 /* Account page */
@@ -661,7 +673,7 @@ a.navItem:hover {
     inset: 0;
     z-index: 30;
     display: block;
-    background: rgba(8, 16, 40, 0.7);
+    background: var(--color-backdrop);
     backdrop-filter: blur(2px);
   }
 
@@ -674,7 +686,7 @@ a.navItem:hover {
     width: min(300px, 86vw);
     height: 100dvh;
     padding: 20px 16px;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-elevated);
     transform: translateX(-100%);
     visibility: hidden;
     transition:
@@ -726,4 +738,71 @@ a.navItem:hover {
     font-size: 26px;
     line-height: 32px;
   }
+}
+
+/* Account page */
+.cardValue {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.themePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: none;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 4px;
+  border: 0.6px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.segment {
+  position: relative;
+  cursor: pointer;
+}
+
+.segment input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment span {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.segment:hover span {
+  color: var(--color-text);
+}
+
+.segment input:checked + span {
+  background: var(--gradient-primary);
+  color: var(--color-on-accent);
+}
+
+.segment input:focus-visible + span {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.saveStatus {
+  min-height: 20px;
+  color: var(--color-text-subtle);
+  font-size: 13px;
 }

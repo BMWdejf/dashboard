@@ -2,7 +2,10 @@
 
 import { redirect } from 'next/navigation';
 
+import { getUserTheme } from '@repo/core-db';
+
 import { getAuth } from '../../lib/auth/server';
+import { writeThemeCookie } from '../../lib/theme';
 
 export type AuthFormState = { error?: string } | undefined;
 
@@ -37,8 +40,17 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
   const email = field(form, 'email').toLowerCase();
   const password = String(form.get('password') ?? '');
   if (!email || !password) return { error: 'Vyplňte e-mail a heslo.' };
-  const { error } = await getAuth().signIn.email({ email, password });
+  const { data, error } = await getAuth().signIn.email({ email, password });
   if (error) return { error: 'Nesprávný e-mail nebo heslo.' };
+  // Bring the user's saved theme to this browser. Not fatal if the DB is down.
+  const userId = data?.user?.id;
+  if (userId) {
+    try {
+      await writeThemeCookie(await getUserTheme(userId));
+    } catch (e) {
+      console.warn('sign-in: loading theme failed', e instanceof Error ? e.message : e);
+    }
+  }
   redirect('/');
 }
 

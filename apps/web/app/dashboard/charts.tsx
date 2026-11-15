@@ -4,6 +4,7 @@ import styles from './dashboard.module.css';
 
 interface Series {
   values: number[];
+  /** CSS colour, e.g. a theme variable: 'var(--chart-1)'. */
   color: string;
   label: string;
 }
@@ -59,8 +60,8 @@ export function LineChart({
       <defs>
         {series.map((s, i) => (
           <linearGradient key={s.label} id={`area-${i}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={s.color} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+            <stop offset="0%" style={{ stopColor: s.color, stopOpacity: 0.22 }} />
+            <stop offset="100%" style={{ stopColor: s.color, stopOpacity: 0 }} />
           </linearGradient>
         ))}
       </defs>
@@ -90,7 +91,7 @@ export function LineChart({
                 fill={`url(#area-${i})`}
               />
             )}
-            <path d={line} fill="none" stroke={s.color} strokeWidth="2" />
+            <path d={line} fill="none" style={{ stroke: s.color }} strokeWidth="2.5" />
           </g>
         );
       })}
@@ -157,12 +158,12 @@ export function Sparkline({
   );
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className={styles.chart} role="img" aria-label={label}>
-      <path d={smoothPath(pts)} fill="none" stroke="#21c3fc" strokeWidth="2" />
+      <path d={smoothPath(pts)} fill="none" className={styles.seriesSecondary} strokeWidth="2" />
     </svg>
   );
 }
 
-const DEVICE_COLORS = ['#cb3cff', '#21c3fc', '#0e43fb'];
+const DEVICE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)'];
 export const deviceColor = (i: number) => DEVICE_COLORS[i % DEVICE_COLORS.length];
 
 /** Semi-circle gauge split by share, with the total in the middle. */
@@ -180,13 +181,13 @@ export function Gauge({ parts, total }: { parts: { label: string; value: number 
   return (
     <div className={styles.gauge}>
       <svg viewBox="0 0 200 110" role="img" aria-label="Uživatelé podle zařízení">
-        <path d={arc} fill="none" stroke="#0b1739" strokeWidth="16" />
+        <path d={arc} fill="none" className={styles.gaugeTrack} strokeWidth="16" />
         {segments.map((s, i) => (
           <path
             key={s.label}
             d={arc}
             fill="none"
-            stroke={deviceColor(i)}
+            style={{ stroke: deviceColor(i) }}
             strokeWidth="16"
             strokeDasharray={`${Math.max(0, s.seg - 3)} ${len}`}
             strokeDashoffset={-s.offset}

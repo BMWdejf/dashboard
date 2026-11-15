@@ -11,9 +11,11 @@
 }
 
 /*
- * Design tokens from design/figma/Colors.json and DESIGN.md ("Dashdark" palette).
- * The design is dark-only. --background / --foreground above stay as aliases
- * for the template pages until they move to these tokens.
+ * Design tokens. Dark (default) from design/figma/Colors.json and DESIGN.md;
+ * light from design/figma/DESIGN light mode.md. <html data-theme> picks the
+ * theme: "dark", "light", or "system" (follows prefers-color-scheme). The
+ * user's choice is stored in user_preferences and the `theme` cookie.
+ * --background / --foreground above are template leftovers.
  */
 :root {
   /* Surfaces (neutral 800 → 700) */
@@ -37,6 +39,7 @@
   --color-accent: #cb3cff;
   --color-accent-deep: #7f25fb;
   --gradient-primary: linear-gradient(135deg, #cb3cff 20%, #7f25fb 68%);
+  --color-on-accent: #ffffff; /* text on the gradient, both themes */
   --color-secondary: #6c72ff;
   --color-secondary-alt: #8951ff;
   --color-link: #eeb1ff;
@@ -60,10 +63,145 @@
   --radius-card: 12px;
 
   --shadow-card: 1px 1px 1px 0 rgba(16, 25, 52, 0.4);
+  --shadow-elevated: 0 25px 50px rgba(0, 0, 0, 0.4);
+  --color-card: #081028; /* dashboard cards */
+  --color-auth-card: #0b1739; /* sign-in / account cards on the auth screens */
+  --color-backdrop: rgba(8, 16, 40, 0.7);
+  --focus-ring: rgba(203, 60, 255, 0.25);
+
+  /* Charts */
+  --chart-1: #cb3cff;
+  --chart-2: #21c3fc;
+  --chart-3: #0e43fb;
+  --chart-track: #0b1739;
+  --chart-grid: #0b1739;
+
+  /* Trend pills and status badges */
+  --trend-up-fg: #21c3fc;
+  --trend-up-bg: rgba(33, 195, 252, 0.12);
+  --trend-up-border: rgba(33, 195, 252, 0.3);
+  --trend-down-fg: #ff6b8a;
+  --trend-down-bg: rgba(255, 107, 138, 0.12);
+  --trend-down-border: rgba(255, 107, 138, 0.3);
+  --badge-ok-fg: #21c3fc;
+  --badge-ok-bg: rgba(33, 195, 252, 0.12);
+  --badge-warn-fg: #fdb52a;
+  --badge-warn-bg: rgba(253, 181, 42, 0.12);
+
+  color-scheme: dark;
   --space-grid: 28px;
 
   --font-display: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
   --font-ui: 'Inter Variable', system-ui, sans-serif;
+}
+
+/* Light theme (design/figma/DESIGN light mode.md) */
+:root[data-theme='light'] {
+  --color-bg: #f4f6fb;
+  --color-surface-sunken: #ffffff;
+  --color-surface: #f8fafc;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-translucent: rgba(255, 255, 255, 0.95);
+  --color-overlay: #f8fafc;
+  --color-badge: #f1f5f9;
+  --color-border: #e2e8f0;
+
+  --color-text: #080f25;
+  --color-text-secondary: #37446b;
+  --color-text-tertiary: #37446b;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #64748b;
+
+  --color-link: #9700c6;
+  --color-info: #0ea5e9;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.03);
+  --shadow-elevated: 0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 32px -4px rgba(16, 24, 40, 0.08);
+  --color-card: #ffffff;
+  --color-auth-card: #ffffff;
+  --color-backdrop: rgba(8, 15, 37, 0.35);
+  --focus-ring: rgba(203, 60, 255, 0.15);
+
+  --chart-1: #cb3cff;
+  --chart-2: #6c72ff;
+  --chart-3: #0ea5e9;
+  --chart-track: #e8edf5;
+  --chart-grid: #e8edf5;
+
+  --trend-up-fg: #047857;
+  --trend-up-bg: rgba(16, 185, 129, 0.1);
+  --trend-up-border: rgba(16, 185, 129, 0.2);
+  --trend-down-fg: #b91c1c;
+  --trend-down-bg: rgba(239, 68, 68, 0.1);
+  --trend-down-border: rgba(239, 68, 68, 0.2);
+  --badge-ok-fg: #047857;
+  --badge-ok-bg: rgba(16, 185, 129, 0.1);
+  --badge-warn-fg: #b45309;
+  --badge-warn-bg: rgba(245, 158, 11, 0.12);
+
+  /* Auth screen glows: softer on white */
+  --color-glow-pink: #eeb1ff;
+  --color-glow-violet: #c0c1ff;
+  --color-glow-cyan: #89ceff;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] {
+    --color-bg: #f4f6fb;
+    --color-surface-sunken: #ffffff;
+    --color-surface: #f8fafc;
+    --color-surface-muted: #f1f5f9;
+    --color-surface-translucent: rgba(255, 255, 255, 0.95);
+    --color-overlay: #f8fafc;
+    --color-badge: #f1f5f9;
+    --color-border: #e2e8f0;
+
+    --color-text: #080f25;
+    --color-text-secondary: #37446b;
+    --color-text-tertiary: #37446b;
+    --color-text-muted: #64748b;
+    --color-text-subtle: #64748b;
+
+    --color-link: #9700c6;
+    --color-info: #0ea5e9;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+
+    --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.03);
+    --shadow-elevated: 0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 32px -4px rgba(16, 24, 40, 0.08);
+    --color-card: #ffffff;
+  --color-auth-card: #ffffff;
+    --color-backdrop: rgba(8, 15, 37, 0.35);
+    --focus-ring: rgba(203, 60, 255, 0.15);
+
+    --chart-1: #cb3cff;
+    --chart-2: #6c72ff;
+    --chart-3: #0ea5e9;
+    --chart-track: #e8edf5;
+    --chart-grid: #e8edf5;
+
+    --trend-up-fg: #047857;
+    --trend-up-bg: rgba(16, 185, 129, 0.1);
+    --trend-up-border: rgba(16, 185, 129, 0.2);
+    --trend-down-fg: #b91c1c;
+    --trend-down-bg: rgba(239, 68, 68, 0.1);
+    --trend-down-border: rgba(239, 68, 68, 0.2);
+    --badge-ok-fg: #047857;
+    --badge-ok-bg: rgba(16, 185, 129, 0.1);
+    --badge-warn-fg: #b45309;
+    --badge-warn-bg: rgba(245, 158, 11, 0.12);
+
+    /* Auth screen glows: softer on white */
+    --color-glow-pink: #eeb1ff;
+    --color-glow-violet: #c0c1ff;
+    --color-glow-cyan: #89ceff;
+
+    color-scheme: light;
+  }
 }
 
 html,
@@ -73,8 +211,8 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 
 * {
