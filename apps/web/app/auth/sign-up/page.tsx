@@ -1,6 +1,5 @@
-import { signUp } from '../actions';
-import { AuthForm } from '../AuthForm';
+import { SignUpForm } from '../SignUpForm';
 
 export default function SignUpPage() {
-  return <AuthForm mode="sign-up" action={signUp} />;
+  return <SignUpForm />;
 }

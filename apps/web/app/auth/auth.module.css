@@ -116,9 +116,11 @@
   border-radius: 9999px;
   background: var(--color-badge);
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   line-height: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .badge::before {
@@ -275,6 +277,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 16px 32px;
   border-top: 1px solid var(--color-border);
@@ -307,4 +310,221 @@
     font-size: 26px;
     line-height: 32px;
   }
+}
+
+/* Sign Up (design/figma/Sign Up.json) */
+.socialRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.socialButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  border: 0.6px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.socialButton:hover {
+  border-color: var(--color-accent);
+}
+
+.socialButton:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.socialButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.orDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.orDivider::before,
+.orDivider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.strengthText {
+  color: var(--color-text-subtle);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.strengthMeter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.strengthMeter span {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+
+.strengthMeter[data-strength='1'] span:nth-child(-n + 1) {
+  background: var(--color-danger);
+}
+
+.strengthMeter[data-strength='2'] span:nth-child(-n + 2) {
+  background: var(--color-warning);
+}
+
+.strengthMeter[data-strength='3'] span {
+  background: var(--trend-up-fg);
+}
+
+.terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.terms input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: var(--color-accent);
+}
+
+.terms a {
+  color: var(--color-link);
+}
+
+.terms a:hover {
+  text-decoration: underline;
+}
+
+/* Trust strip: the design's bottom "Margin" (28px: 2px + 12px top padding + 14px text) */
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  margin-top: 2px;
+  padding-top: 11px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  list-style: none;
+}
+
+.trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trust li::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--trend-up-fg);
+  content: '';
+}
+
+/* Sign Up measurements from Sign Up.json: header 88, inputs 38, password 74, link row 20 */
+.cardSignUp .title {
+  margin-top: 0;
+}
+
+.cardSignUp .field input {
+  height: 38px;
+}
+
+.cardSignUp .alt {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+}
+
+/* Footer links */
+.footerStart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.footerLinks a {
+  color: var(--color-text-subtle);
+}
+
+.footerLinks a:hover {
+  color: var(--color-text);
+}
+
+/* Status page */
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  font-size: 14px;
+}
+
+.statusList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-secondary);
+}
+
+.statusOk {
+  color: var(--trend-up-fg);
+}
+
+.statusDown {
+  color: var(--color-danger);
 }

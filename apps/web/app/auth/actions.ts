@@ -25,6 +25,9 @@ export async function signUp(_prev: AuthFormState, form: FormData): Promise<Auth
   if (!name || !email || password.length < 8) {
     return { error: 'Vyplňte jméno, e-mail a heslo (alespoň 8 znaků).' };
   }
+  if (form.get('terms') !== 'on') {
+    return { error: 'Pro registraci je potřeba souhlasit s podmínkami.' };
+  }
   const { error } = await getAuth().signUp.email({ name, email, password });
   if (error) {
     // Upstream messages such as "user already exists" would reveal who has an
