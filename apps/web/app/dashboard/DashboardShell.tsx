@@ -5,6 +5,8 @@ import Link from 'next/link';
 
 import { signOut } from '../auth/actions';
 import styles from './dashboard.module.css';
+import { NavSearch, type NavItem } from './NavSearch';
+import { SidebarFrame } from './SidebarFrame';
 
 interface Props {
   user: { name: string; email: string };
@@ -13,44 +15,32 @@ interface Props {
   children: React.ReactNode;
 }
 
-const NAV = [
+// The design's menu (Dashboard, Features, Users, Pricing, Integrations,
+// Settings, Template pages) mapped to this app; items without a page yet are
+// shown as "brzy".
+const NAV: NavItem[] = [
   { href: '/', label: 'Přehled' },
-  { href: '/account', label: 'Účet' },
-] as const;
-
-const SOON = ['Objednávky', 'Synchronizace', 'Scraping'];
+  { label: 'Objednávky' },
+  { label: 'Synchronizace' },
+  { label: 'Scraping' },
+  { label: 'Integrace' },
+  { href: '/account', label: 'Nastavení' },
+];
 
 /**
- * Dashboard frame from design/figma/Dashboard-1.json: a 300px sidebar
- * ("Sidebar Wrapper") next to the content area ("Dashboard v1").
+ * Dashboard frame from design/figma (Dashboard-1, Sidebar Wrapper): a 300px
+ * sidebar with search, navigation and the user widget, next to the content.
  */
 export function DashboardShell({ user, active, children }: Props) {
   return (
     <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>
+      <SidebarFrame>
+        <div className={`${styles.brand} ${styles.sidebarBrand}`}>
           <span className={styles.logo} aria-hidden />
           Dashboard
         </div>
 
-        <nav className={styles.nav} aria-label="Hlavní navigace">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={styles.navItem}
-              aria-current={item.href === active ? 'page' : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <p className={styles.navHeading}>Připravujeme</p>
-          {SOON.map((label) => (
-            <span key={label} className={`${styles.navItem} ${styles.navSoon}`} aria-disabled>
-              {label}
-            </span>
-          ))}
-        </nav>
+        <NavSearch items={NAV} active={active} />
 
         <div className={styles.user}>
           <span className={styles.avatar} aria-hidden>
@@ -58,15 +48,15 @@ export function DashboardShell({ user, active, children }: Props) {
           </span>
           <span className={styles.userText}>
             <strong>{user.name}</strong>
-            <span>{user.email}</span>
+            <Link href="/account">Nastavení účtu</Link>
           </span>
           <form action={signOut}>
             <button type="submit" className={styles.signOut}>
-              Odhlásit
+              Odhlásit se
             </button>
           </form>
         </div>
-      </aside>
+      </SidebarFrame>
 
       <main className={styles.content}>{children}</main>
     </div>

@@ -61,3 +61,9 @@ export const authEnv = z.object({
   NEON_AUTH_COOKIE_SECRET: z.string().min(32),
 });
 export type AuthEnv = z.infer<typeof authEnv>;
+
+/** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
+export const dbEnv = z.object({
+  DATABASE_URL: z.url(),
+});
+export type DbEnv = z.infer<typeof dbEnv>;

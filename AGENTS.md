@@ -16,7 +16,11 @@ A Turborepo monorepo (pnpm workspaces):
   - `flexi` (`@repo/client-flexi`): ABRA Flexi REST API; writes are dry-run by default.
 - `packages/core/*`: domain logic shared by the API and future workers.
   - `config` (`@repo/core-config`): zod-validated env (`loadEnv`, `shoptetEnv`,
-    `flexiEnv`, `scraperEnv`).
+    `flexiEnv`, `scraperEnv`, `authEnv`, `dbEnv`).
+  - `db` (`@repo/core-db`): Prisma 7 + Neon (`getDb()`), migrations in
+    `prisma/migrations`, and query functions. `examples_data` holds the
+    dashboard's example data (`getDashboardExamples()`); reseed it with
+    `pnpm --filter @repo/core-db db:seed-examples`.
   - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions.
   - `scraper` (`@repo/core-scraper`): Playwright runner (host allow-list,
     robots.txt, delays, schema validation) and per-site extractors.
@@ -84,7 +88,10 @@ Then add `NEON_AUTH_COOKIE_SECRET` (`openssl rand -base64 32`) to
 - Web only, on a given port: `pnpm --filter web exec next dev --port <port>`
   (run `pnpm --filter @repo/api build` first if `packages/api` has no `dist`).
 - The API listens on port 3000 (hard-coded in `apps/api/src/main.ts`). The web
-  app doesn't call it yet; the dashboard modules show "Zatím nenapojeno".
+  app doesn't call it; the dashboard reads `examples_data` from Neon directly.
+- `.env.local` never overrides variables already set in the shell. If your
+  shell exports `DATABASE_URL` or `NEON_AUTH_*` for another project, unset
+  them before `pnpm dev`, or the app talks to the wrong database.
 
 ## Validation
 

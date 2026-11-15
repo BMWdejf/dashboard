@@ -1,0 +1,34 @@
+// Our tables live in `public` of the Neon `dashboard` database. The
+// `neon_auth` schema belongs to Neon Auth; never model or migrate it here.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Example data for the dashboard until real Shoptet / Flexi data exists.
+/// One row per data point; `section` says which widget it belongs to.
+model ExampleData {
+  id         Int       @id @default(autoincrement())
+  /// summary | kpi | revenue | profit | sessions | device | country | order
+  section    String
+  label      String
+  position   Int       @default(0)
+  value      Decimal   @db.Decimal(14, 2)
+  /// Second series (expenses for `revenue`, users for `country`).
+  value2     Decimal?  @db.Decimal(14, 2)
+  /// Trend in percent for `kpi`.
+  changePct  Decimal?  @map("change_pct") @db.Decimal(6, 2)
+  /// Order status for `order`: paid | pending.
+  status     String?
+  occurredAt DateTime? @map("occurred_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([section, position])
+  @@map("examples_data")
+}

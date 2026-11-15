@@ -10,9 +10,13 @@ General Neon knowledge is in the `neon:neon-postgres` and
 branches, run SQL and prepare migrations. This skill holds **this project's**
 decisions.
 
-> Status: `packages/core/db` doesn't exist yet. The first task that needs
-> persistence creates it with `new-package`, following this file. The approver
-> escalates that PR: it adds a dependency and a schema.
+> Status: `packages/core/db` exists (Prisma 7.10.1, `@prisma/adapter-neon`).
+> Generated client: `src/generated/prisma` (gitignored; `build` and
+> `check-types` run `prisma generate`). First migration:
+> `20261115230000_examples_data`. Config: `prisma.config.ts` reads
+> `DATABASE_URL_UNPOOLED` from the root `.env.local` for migrations.
+> Keep pure mapping in `src/dashboard.ts` (tested) apart from queries, because
+> Jest can't load the generated client.
 
 ## Decisions
 

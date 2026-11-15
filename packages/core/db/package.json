@@ -1,0 +1,46 @@
+{
+  "name": "@repo/core-db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Neon Postgres access through Prisma: schema, migrations and query functions",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "check-types": "prisma generate && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
+    "test": "jest",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed-examples": "prisma db execute --file prisma/seed-examples.sql"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@prisma/adapter-neon": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@repo/core-config": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@jest/globals": "30.5.2",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/jest-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@swc/core": "1.16.18",
+    "@swc/jest": "0.2.39",
+    "@types/node": "26.6.5",
+    "dotenv": "18.0.10",
+    "eslint": "10.13.0",
+    "jest": "30.5.2",
+    "prisma": "7.10.1",
+    "typescript": "7.0.2"
+  }
+}

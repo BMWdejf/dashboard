@@ -24,10 +24,12 @@ This skill holds **this project's** rules.
   from the palette and say so in the PR. A Figma link gives the full detail
   through the MCP.
 - **Built so far**: `/auth/sign-up` and `/auth/sign-in` (`apps/web/app/auth/`)
-  from `Sign Up.json` / `Sign In.json`; the dashboard frame (`/`, `/account`,
-  `apps/web/app/dashboard/DashboardShell.tsx`) from `Dashboard-1.json`, which
-  only gives the 300px sidebar + 1046px content layout. The insides of
-  `Sidebar Wrapper` and `Dashboard v1` still need their own export or a Figma link.
+  from `Sign Up.json` / `Sign In.json`; the dashboard (`/`) from
+  `Dashboard-1.json`, `Sidebar Wrapper.json` and `Dashboard v1 body.json`
+  (`apps/web/app/dashboard/`: shell, nav search, SVG charts). Those two
+  exports carry only texts (`textContent`), not styles: layout follows
+  DESIGN.md, numbers come from `examples_data`. The world map of "Users by
+  country" is not built (bars only).
 - **Source of truth**: the pages `Screens` (finished screens) and
   `Components` (the library). Frames in other pages are drafts. Don't build
   from them unless the task links one explicitly.
