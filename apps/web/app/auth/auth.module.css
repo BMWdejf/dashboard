@@ -116,7 +116,7 @@
   padding: 4px 10px;
   border-radius: 9999px;
   background: var(--color-badge);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 500;
   line-height: 12px;
@@ -141,7 +141,7 @@
 
 .subtitle {
   padding-top: 2px;
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 14px;
   line-height: 20px;
 }
@@ -167,7 +167,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
@@ -186,7 +186,7 @@
 }
 
 .field input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
 }
 
 .field input:focus-visible {
@@ -196,7 +196,7 @@
 }
 
 .hint {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 400;
 }
@@ -206,7 +206,7 @@
   margin-top: 4px;
   border: none;
   border-radius: var(--radius-control);
-  background: var(--color-accent);
+  background: var(--gradient-primary);
   color: var(--color-text);
   font: inherit;
   font-size: 14px;
@@ -215,7 +215,7 @@
 }
 
 .submit:hover {
-  background: var(--color-accent-deep);
+  filter: brightness(1.1);
 }
 
 .submit:focus-visible {
@@ -236,7 +236,7 @@
 
 /* "Already have an account? Sign in" */
 .alt {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 12px;
   line-height: 20px;
   text-align: center;
@@ -261,13 +261,13 @@
 
 /* Account page */
 .account {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 14px;
   line-height: 20px;
 }
 
 .account strong {
-  color: var(--color-text);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -283,14 +283,14 @@
 }
 
 .brand {
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
 }
 
 .copyright {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 12px;
   line-height: 16px;
 }

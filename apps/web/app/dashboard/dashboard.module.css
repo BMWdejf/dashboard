@@ -38,7 +38,7 @@
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-deep));
+  background: var(--gradient-primary);
 }
 
 .nav {
@@ -54,7 +54,7 @@
   height: 40px;
   padding: 0 12px;
   border-radius: var(--radius-control);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font-size: 14px;
   font-weight: 500;
 }
@@ -66,12 +66,12 @@ a.navItem:hover {
 
 .navItem[aria-current='page'] {
   background: var(--color-surface);
-  color: var(--color-link);
+  color: var(--color-accent);
 }
 
 .navHeading {
   margin: 16px 12px 4px;
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -79,7 +79,7 @@ a.navItem:hover {
 }
 
 .navSoon {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   cursor: not-allowed;
 }
 
@@ -120,7 +120,7 @@ a.navItem:hover {
 
 .userText span {
   overflow: hidden;
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -135,7 +135,7 @@ a.navItem:hover {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -148,8 +148,8 @@ a.navItem:hover {
 
 .content {
   width: 100%;
-  max-width: 1046px;
-  padding: 40px 47px;
+  max-width: 1140px;
+  padding: 40px 47px 48px;
 }
 
 /* Page content */
@@ -169,7 +169,7 @@ a.navItem:hover {
 }
 
 .subtitle {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 14px;
   line-height: 20px;
 }
@@ -177,7 +177,7 @@ a.navItem:hover {
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--space-grid);
 }
 
 .card {
@@ -185,18 +185,20 @@ a.navItem:hover {
   flex-direction: column;
   gap: 8px;
   padding: 20px;
-  border: 1px solid var(--color-border);
+  border: 0.6px solid var(--color-border);
   border-radius: var(--radius-card);
-  background: var(--color-surface);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .cardTitle {
+  color: var(--color-text-muted);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cardText {
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   font-size: 13px;
   line-height: 20px;
 }
@@ -205,9 +207,9 @@ a.navItem:hover {
   align-self: flex-start;
   margin-top: 8px;
   padding: 2px 8px;
-  border-radius: 9999px;
-  background: var(--color-badge);
-  color: var(--color-text-secondary);
+  border-radius: var(--radius-badge);
+  background: rgba(253, 181, 42, 0.12);
+  color: var(--color-warning);
   font-size: 11px;
   font-weight: 500;
   line-height: 16px;

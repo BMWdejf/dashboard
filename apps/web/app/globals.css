@@ -11,32 +11,56 @@
 }
 
 /*
- * Design tokens from the Figma design (design/figma/*.json, "Dashdark" palette).
+ * Design tokens from design/figma/Colors.json and DESIGN.md ("Dashdark" palette).
  * The design is dark-only. --background / --foreground above stay as aliases
  * for the template pages until they move to these tokens.
  */
 :root {
-  --color-bg: #081028;
-  --color-surface: #0b1739;
+  /* Surfaces (neutral 800 → 700) */
+  --color-bg: #081028; /* canvas, dashboard card fill */
+  --color-surface-sunken: #0a1330; /* sidebar, top bars, inputs */
+  --color-surface: #0b1739; /* inner surfaces, hover, dividers */
+  --color-surface-muted: #101935; /* secondary containers */
   --color-surface-translucent: rgba(11, 23, 57, 0.95);
-  --color-surface-sunken: #0a1330;
   --color-overlay: rgba(19, 26, 51, 0.4);
   --color-badge: rgba(33, 41, 66, 0.8);
   --color-border: #343b4f;
-  --color-text: #ffffff;
-  --color-text-secondary: #aeb9e1;
-  --color-text-muted: #7e89ac;
-  --color-link: #eeb1ff;
+
+  /* Text (neutral 100 → 500) */
+  --color-text: #ffffff; /* headings, KPI values, active nav */
+  --color-text-secondary: #d9e1fa; /* sub-headings, table data */
+  --color-text-tertiary: #d1dbf9; /* active labels */
+  --color-text-muted: #aeb9e1; /* card titles, labels, table headers, placeholders */
+  --color-text-subtle: #7e89ac; /* timestamps, metadata, disabled */
+
+  /* Brand */
   --color-accent: #cb3cff;
   --color-accent-deep: #7f25fb;
+  --gradient-primary: linear-gradient(135deg, #cb3cff 20%, #7f25fb 68%);
+  --color-secondary: #6c72ff;
+  --color-secondary-alt: #8951ff;
+  --color-link: #eeb1ff;
+
+  /* Data visualisation and states */
+  --color-info: #21c3fc;
+  --color-info-alt: #57c3ff;
+  --color-blue: #0e43fb;
+  --color-warning: #fdb52a;
+  /* Not in the palette: the design defines no error colour yet. */
+  --color-danger: #ff6b8a;
+
+  /* Background glows of the auth screens */
   --color-glow-pink: #d359ff;
   --color-glow-violet: #7f25fb;
   --color-glow-cyan: #01bbf4;
-  --color-danger: #ff6b8a;
 
   --radius-control: 4px;
+  --radius-badge: 6px;
   --radius-panel: 8px;
   --radius-card: 12px;
+
+  --shadow-card: 1px 1px 1px 0 rgba(16, 25, 52, 0.4);
+  --space-grid: 28px;
 
   --font-display: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
   --font-ui: 'Inter Variable', system-ui, sans-serif;

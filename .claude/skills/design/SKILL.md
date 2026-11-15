@@ -38,9 +38,26 @@ This skill holds **this project's** rules.
 
 Figma variables map 1:1 to CSS custom properties in `apps/web/app/globals.css`:
 
-The tokens taken from the exports are in `apps/web/app/globals.css`
-(`--color-*`, `--radius-*`, `--font-display` = Plus Jakarta Sans,
-`--font-ui` = Inter, both from `@fontsource-variable/*`). The design is dark-only.
+The palette comes from `design/figma/Colors.json` and `design/figma/DESIGN.md`
+(read DESIGN.md first: it names every colour's role, the type scale, spacing
+and card specs). The tokens live in `apps/web/app/globals.css`:
+
+- surfaces `--color-bg` #081028 (canvas and dashboard cards),
+  `--color-surface-sunken` #0a1330 (sidebar, inputs), `--color-surface` #0b1739,
+  `--color-surface-muted` #101935, `--color-border` #343b4f;
+- text `--color-text` #fff, `--color-text-secondary` #d9e1fa,
+  `--color-text-tertiary` #d1dbf9, `--color-text-muted` #aeb9e1 (labels, card
+  titles), `--color-text-subtle` #7e89ac (metadata);
+- brand `--color-accent` #cb3cff, `--gradient-primary` (#cb3cff → #7f25fb, all
+  primary buttons), `--color-secondary` #6c72ff, `--color-secondary-alt` #8951ff;
+- data/states `--color-info` #21c3fc, `--color-blue` #0e43fb,
+  `--color-warning` #fdb52a. The palette has no error colour; `--color-danger`
+  is ours until the design adds one;
+- `--shadow-card`, `--space-grid` (28px), `--radius-*`, `--font-display`
+  (Plus Jakarta Sans), `--font-ui` (Inter). The design is dark-only.
+
+In `Colors.json` the primary swatch is labelled `#6C72FF` but filled `#cb3cff`;
+DESIGN.md confirms `#cb3cff` is primary and `#6c72ff` secondary.
 
 | Figma collection | CSS | Example |
 |---|---|---|
