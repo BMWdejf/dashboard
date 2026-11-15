@@ -23,8 +23,14 @@ This skill holds **this project's** rules.
   levels deep (inputs, button labels and icons are missing), so infer those
   from the palette and say so in the PR. A Figma link gives the full detail
   through the MCP.
-- **Built so far**: `/auth/sign-up` and `/auth/sign-in` (`apps/web/app/auth/`)
-  from `Sign Up.json` / `Sign In.json`; the dashboard (`/`) from
+- **Built so far**: `/auth/sign-up` (`SignUpForm.tsx`) and `/auth/sign-in`
+  (`SignInForm.tsx` + tiles in `sign-in/page.tsx`) match `Sign Up.json` /
+  `Sign In.json` 1:1 in layout and measurements (checked in the browser:
+  sign-up card 480x632, sign-in card 480x635 at top 104 with 152x60 tiles).
+  The exports' `textContent` lists every text; marketing claims of the
+  template (free trial, SOC 2, 99.99% uptime, 256-bit) were replaced with true
+  statements about this app. `/auth/recovery` is a placeholder until
+  `Recovery.json` is built; the dashboard (`/`) from
   `Dashboard-1.json`, `Sidebar Wrapper.json` and `Dashboard v1 body.json`
   (`apps/web/app/dashboard/`: shell, nav search, SVG charts). Those two
   exports carry only texts (`textContent`), not styles: layout follows

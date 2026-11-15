@@ -528,3 +528,310 @@
 .statusDown {
   color: var(--color-danger);
 }
+
+/* Sign In (design/figma/Sign In.json): card 480x635, padding 40, gap 16;
+   header 122, social 48, divider 1, form 248, sign-up panel 44, security 12;
+   three 152x60 tiles 24px below the card. */
+.main:has(.signInPage) .glowPink {
+  background: var(--color-link);
+  opacity: 0.1;
+}
+
+.main:has(.signInPage) .glowViolet {
+  width: 384px;
+  height: 384px;
+  opacity: 0.1;
+  filter: blur(120px);
+}
+
+.main:has(.signInPage) .glowCyan {
+  width: 600px;
+  height: 600px;
+  background: #7bd4ff;
+  filter: blur(160px);
+}
+
+.signInPage {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 480px;
+  align-self: start;
+  margin: 40px 0 66px;
+}
+
+.signInCard::before {
+  background: linear-gradient(90deg, transparent, var(--color-glow-pink), transparent);
+}
+
+.signInHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.signInLogo {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-card);
+  background: var(--gradient-primary);
+  box-shadow: 0 4px 14px rgba(203, 60, 255, 0.25);
+}
+
+.signInTitle {
+  margin-top: 16px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 38px;
+  letter-spacing: -0.8px;
+}
+
+.signInSubtitle {
+  color: var(--color-text-subtle);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.signInSocial {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.lineDivider {
+  position: relative;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.lineDivider span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 0 12px;
+  background: var(--color-auth-card);
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.signInForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.signInField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.signInField input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.signInField input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.signInField input:focus-visible {
+  border-color: var(--color-accent);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+.forgot {
+  color: var(--color-link);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.forgot:hover {
+  text-decoration: underline;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+}
+
+.signInSubmit {
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--gradient-primary);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.signInSubmit:hover {
+  filter: brightness(1.1);
+}
+
+.signInSubmit:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.signInSubmit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.signUpPanel {
+  padding: 16px 0 8px;
+  border-radius: var(--radius-panel);
+  background: var(--color-overlay);
+}
+
+.signUpPanel p {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.signUpPanel a {
+  color: var(--color-link);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.signUpPanel a:hover {
+  text-decoration: underline;
+}
+
+.secured {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 12px;
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Padlock drawn with borders */
+.lockIcon {
+  position: relative;
+  width: 8px;
+  height: 6px;
+  margin-top: 3px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.lockIcon::before {
+  position: absolute;
+  bottom: 5px;
+  left: 1.5px;
+  width: 5px;
+  height: 5px;
+  border: 1.2px solid currentColor;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  box-sizing: border-box;
+  content: '';
+}
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  list-style: none;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 152px;
+  height: 60px;
+  padding: 12px;
+  border-radius: var(--radius-panel);
+  background: var(--color-tile);
+}
+
+.tile strong {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.tile span {
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tile .tileDown {
+  color: var(--color-danger);
+}
+
+@media (max-width: 520px) {
+  .signInPage {
+    margin: 0;
+  }
+
+  .signInCard {
+    padding: 24px;
+  }
+
+  .tile {
+    width: calc(50% - 6px);
+  }
+}
+
+/* Password label row with the "forgot" link: 20px like the e-mail label */
+.signInField .labelRow {
+  align-items: center;
+  height: 20px;
+}

@@ -43,7 +43,9 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
   const email = field(form, 'email').toLowerCase();
   const password = String(form.get('password') ?? '');
   if (!email || !password) return { error: 'Vyplňte e-mail a heslo.' };
-  const { data, error } = await getAuth().signIn.email({ email, password });
+  // Unchecked "remember me" → a session cookie that ends with the browser.
+  const rememberMe = form.get('remember') === 'on';
+  const { data, error } = await getAuth().signIn.email({ email, password, rememberMe });
   if (error) return { error: 'Nesprávný e-mail nebo heslo.' };
   // Bring the user's saved theme to this browser. Not fatal if the DB is down.
   const userId = data?.user?.id;
