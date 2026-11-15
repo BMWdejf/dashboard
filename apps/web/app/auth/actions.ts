@@ -30,7 +30,7 @@ export async function signUp(_prev: AuthFormState, form: FormData): Promise<Auth
     console.warn('sign-up failed', { status: error.status, code: error.code });
     return { error: SIGN_UP_ERRORS[error.code ?? ''] ?? 'Registrace se nezdařila. Zkuste to znovu, nebo se přihlaste.' };
   }
-  redirect('/account');
+  redirect('/');
 }
 
 export async function signIn(_prev: AuthFormState, form: FormData): Promise<AuthFormState> {
@@ -39,7 +39,7 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
   if (!email || !password) return { error: 'Vyplňte e-mail a heslo.' };
   const { error } = await getAuth().signIn.email({ email, password });
   if (error) return { error: 'Nesprávný e-mail nebo heslo.' };
-  redirect('/account');
+  redirect('/');
 }
 
 export async function signOut(): Promise<void> {

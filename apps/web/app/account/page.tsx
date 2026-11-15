@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 
-import { signOut } from '../auth/actions';
-import AuthLayout from '../auth/layout';
-import styles from '../auth/auth.module.css';
+import { DashboardShell } from '../dashboard/DashboardShell';
+import styles from '../dashboard/dashboard.module.css';
 import { getAuth } from '../../lib/auth/server';
 
 // Reads the session from cookies on every request.
@@ -15,21 +14,21 @@ export default async function AccountPage() {
   const { user } = session;
 
   return (
-    <AuthLayout>
-      <section className={`${styles.card} ${styles.cardSignIn}`}>
-        <header className={styles.header}>
-          <span className={styles.badge}>Účet</span>
-          <h1 className={styles.title}>Váš účet</h1>
-        </header>
-        <p className={styles.account}>
-          Přihlášen jako <strong>{user.name}</strong> ({user.email})
-        </p>
-        <form action={signOut}>
-          <button type="submit" className={styles.submit}>
-            Odhlásit se
-          </button>
-        </form>
+    <DashboardShell user={user} active="/account">
+      <header className={styles.header}>
+        <h1 className={styles.title}>Váš účet</h1>
+        <p className={styles.subtitle}>Údaje, se kterými jste přihlášeni.</p>
+      </header>
+      <section className={styles.grid}>
+        <article className={styles.card}>
+          <h2 className={styles.cardTitle}>Jméno</h2>
+          <p className={styles.cardText}>{user.name}</p>
+        </article>
+        <article className={styles.card}>
+          <h2 className={styles.cardTitle}>E-mail</h2>
+          <p className={styles.cardText}>{user.email}</p>
+        </article>
       </section>
-    </AuthLayout>
+    </DashboardShell>
   );
 }

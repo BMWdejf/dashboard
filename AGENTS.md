@@ -2,9 +2,9 @@
 
 A Turborepo monorepo (pnpm workspaces):
 
-- `apps/web`: Next.js App Router frontend. Shows the links from the API, and
-  has e-mail sign-up/sign-in with Neon Auth (`/auth/sign-up`, `/auth/sign-in`,
-  protected `/account`).
+- `apps/web`: Next.js App Router frontend. `/` is the dashboard and `/account`
+  the user's account; both need a session (`proxy.ts` redirects to
+  `/auth/sign-in`). E-mail sign-up/sign-in with Neon Auth under `/auth/*`.
 - `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
@@ -83,9 +83,8 @@ Then add `NEON_AUTH_COOKIE_SECRET` (`openssl rand -base64 32`) to
 - Everything: `pnpm dev` (web on 3001, API on 3000).
 - Web only, on a given port: `pnpm --filter web exec next dev --port <port>`
   (run `pnpm --filter @repo/api build` first if `packages/api` has no `dist`).
-- The API listens on port 3000 (hard-coded in `apps/api/src/main.ts`), and the
-  web app fetches `http://localhost:3000/links`. If the API isn't running, the
-  home page renders with an empty list of links.
+- The API listens on port 3000 (hard-coded in `apps/api/src/main.ts`). The web
+  app doesn't call it yet; the dashboard modules show "Zatím nenapojeno".
 
 ## Validation
 

@@ -1,147 +1,48 @@
-import type { Link } from '@repo/api';
-import { Button } from '@repo/ui/button';
-import Image, { type ImageProps } from 'next/image';
+import { redirect } from 'next/navigation';
 
-import styles from './page.module.css';
+import { DashboardShell } from './dashboard/DashboardShell';
+import styles from './dashboard/dashboard.module.css';
+import { getAuth } from '../lib/auth/server';
 
-type Props = Omit<ImageProps, 'src'> & {
-  srcLight: string;
-  srcDark: string;
-};
+// Reads the session from cookies on every request.
+export const dynamic = 'force-dynamic';
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
+const MODULES = [
+  {
+    title: 'Objednávky ze Shoptetu',
+    text: 'Přehled objednávek a jejich stav synchronizace se objeví po napojení Shoptet API.',
+  },
+  {
+    title: 'Synchronizace do ABRA Flexi',
+    text: 'Běhy synchronizace, chyby a převod identifikátorů mezi Shoptetem a Flexi.',
+  },
+  {
+    title: 'Scraping',
+    text: 'Sledované weby a nasbíraná data (ceny, dostupnost) z Playwright scraperu.',
+  },
+];
 
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
-
-async function getLinks(): Promise<Link[]> {
-  try {
-    const res = await fetch('http://localhost:3000/links', {
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch links');
-    }
-
-    return res.json();
-  } catch (error) {
-    console.error('Error fetching links:', error);
-    return [];
-  }
-}
-
-export default async function Home() {
-  const links = await getLinks();
+export default async function DashboardPage() {
+  const { data: session } = await getAuth().getSession();
+  // The proxy redirects too, but the page checks the session itself.
+  if (!session?.user) redirect('/auth/sign-in');
+  const { user } = session;
 
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
-
-        {links.length > 0 ? (
-          <div className={styles.ctas}>
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={link.description}
-                className={styles.secondary}
-              >
-                {link.title}
-              </a>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: '#666' }}>
-            No links available. Make sure the NestJS API is running on port
-            3000.
-          </div>
-        )}
-      </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.dev →
-        </a>
-      </footer>
-    </div>
+    <DashboardShell user={user} active="/">
+      <header className={styles.header}>
+        <h1 className={styles.title}>Vítejte, {user.name}</h1>
+        <p className={styles.subtitle}>Přehled vašeho e-shopu a účetnictví.</p>
+      </header>
+      <section className={styles.grid} aria-label="Moduly">
+        {MODULES.map((m) => (
+          <article key={m.title} className={styles.card}>
+            <h2 className={styles.cardTitle}>{m.title}</h2>
+            <p className={styles.cardText}>{m.text}</p>
+            <span className={styles.status}>Zatím nenapojeno</span>
+          </article>
+        ))}
+      </section>
+    </DashboardShell>
   );
 }
