@@ -36,8 +36,18 @@ export interface ScrapeOptions {
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 async function defaultFetchRobots(origin: string): Promise<string | undefined> {
-  const res = await fetch(`${origin}/robots.txt`);
-  return res.ok ? res.text() : undefined;
+  // Don't follow redirects: a redirect could point at a host outside the allow-list.
+  const res = await fetch(`${origin}/robots.txt`, { redirect: 'manual' });
+  return res.status === 200 ? res.text() : undefined;
+}
+
+function hostAllowed(hosts: string[], raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    return (u.protocol === 'https:' || u.protocol === 'http:') && hosts.includes(u.hostname);
+  } catch {
+    return false;
+  }
 }
 
 async function defaultLaunch(): Promise<Browser> {
@@ -59,6 +69,16 @@ export async function scrape<S extends z.ZodType>(
   const browser = await (opts.launch ?? defaultLaunch)();
   const context = await browser.newContext({ userAgent });
   try {
+    // Enforce the allow-list on every navigation, including redirects and
+    // frames, not only on the URL we start from. Subresources (CDN images,
+    // fonts) may load from other hosts; documents may not.
+    await context.route('**/*', (route) => {
+      const req = route.request();
+      if (req.isNavigationRequest() && !hostAllowed(extractor.hosts, req.url())) {
+        return route.abort('blockedbyclient');
+      }
+      return route.continue();
+    });
     let first = true;
     for (const raw of urls) {
       let url: URL;
@@ -99,6 +119,9 @@ export async function scrape<S extends z.ZodType>(
           waitUntil: 'domcontentloaded',
           timeout: opts.navigationTimeoutMs ?? 30_000,
         });
+        if (!hostAllowed(extractor.hosts, page.url())) {
+          throw new Error(`navigated outside allowed hosts: ${new URL(page.url()).hostname}`);
+        }
         const parsed = extractor.schema.safeParse(await extractor.extract(page, url));
         results.push(
           parsed.success

@@ -66,7 +66,10 @@ In this project, also ESCALATE if the change:
 - changes how prices, VAT, discounts, currencies or units map between Shoptet
   and Flexi (`packages/core/sync`);
 - changes webhook signature checks or adds a writing call to Shoptet;
-- adds a new website to the scraper, or widens an extractor's `hosts`.
+- adds a new website to the scraper, or widens an extractor's `hosts`;
+- adds or changes anything under `.claude/` (agents, skills, settings, hooks),
+  `factory/` or `.github/`. The gate blocks edits to existing control-plane
+  files, but not new ones: a new hook, agent or workflow still needs a human.
 
 ## Write decision.md
 

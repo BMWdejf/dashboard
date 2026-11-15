@@ -29,8 +29,11 @@
     }
   },
   "protected_paths": [
-    "factory/checks.sh",
-    "factory/config.json"
+    "factory/*",
+    ".claude/agents/*",
+    ".claude/skills/factory/*",
+    ".claude/settings*.json",
+    ".github/*"
   ],
   "ports": {
     "base": 5100,
