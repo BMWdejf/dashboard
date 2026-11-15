@@ -1,0 +1,96 @@
+# AGENTS.md
+
+A Turborepo monorepo (pnpm workspaces):
+
+- `apps/web`: Next.js App Router frontend. Shows the links from the API.
+- `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links`.
+- `packages/api`: shared DTOs and entities (`@repo/api`).
+- `packages/ui`: shared React components (`@repo/ui`).
+- `packages/eslint-config`, `packages/typescript-config`, `packages/jest-config`:
+  shared tooling config.
+- `packages/clients/*`: typed clients for external services, one package per
+  service. They take `fetch` as an option and never read `process.env`.
+  - `shoptet` (`@repo/client-shoptet`): Shoptet REST API + webhook signature.
+  - `flexi` (`@repo/client-flexi`): ABRA Flexi REST API; writes are dry-run by default.
+- `packages/core/*`: domain logic shared by the API and future workers.
+  - `config` (`@repo/core-config`): zod-validated env (`loadEnv`, `shoptetEnv`,
+    `flexiEnv`, `scraperEnv`).
+  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions.
+  - `scraper` (`@repo/core-scraper`): Playwright runner (host allow-list,
+    robots.txt, delays, schema validation) and per-site extractors.
+
+A new client goes in `packages/clients/<service>`, named `@repo/client-<service>`.
+A new domain package goes in `packages/core/<name>`, named `@repo/core-<name>`.
+Copy the `package.json` scripts, tsconfigs, eslint and jest config from a sibling.
+
+## Project skills
+
+`.claude/skills/` holds this repo's conventions. Read the matching one before you
+change an area:
+
+- `nest-module`: anything in `apps/api`.
+- `next-page`: anything in `apps/web` or `packages/ui`.
+- `new-package`: creating a package.
+- `db`: Neon Postgres + Prisma (`packages/core/db`), migrations, branches.
+- `auth`: Neon Auth with Google, invite-only access, roles, protected routes.
+- `design`: building UI from the Figma design (tokens, components, comparing
+  the result).
+- `shoptet-api`, `abra-flexi-api`, `sync-mapping`, `scraper-new-site`,
+  `integration-testing`: the integrations (see below).
+
+## Integrations
+
+Read the skill for the area before changing it: `shoptet-api`,
+`abra-flexi-api`, `sync-mapping`, `scraper-new-site`, `integration-testing`
+(in `.claude/skills/`).
+
+- Tests never call Shoptet, Flexi or a scraped site. Inject `fetch` / `launch`
+  and use fixtures.
+- Never write to ABRA Flexi with dry-run off outside a deliberate, human-run sync.
+- Secrets come only from env (see `packages/core/config`), never from code or fixtures.
+- Playwright browser tests (`*.browser.spec.ts`) need
+  `pnpm --filter @repo/core-scraper exec playwright install chromium`, and are
+  not part of the checks.
+
+## Setup
+
+A fresh checkout needs only:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+There are no `.env` files to copy. Node `>=26.12.0`, pnpm 10.
+
+## Dev servers
+
+- Everything: `pnpm dev` (web on 3001, API on 3000).
+- Web only, on a given port: `pnpm --filter web exec next dev --port <port>`
+  (run `pnpm --filter @repo/api build` first if `packages/api` has no `dist`).
+- The API listens on port 3000 (hard-coded in `apps/api/src/main.ts`), and the
+  web app fetches `http://localhost:3000/links`. If the API isn't running, the
+  home page renders with an empty list of links.
+
+## Validation
+
+These are exactly what `factory/checks.sh` runs:
+
+```bash
+pnpm install --frozen-lockfile --prefer-offline
+pnpm lint
+pnpm check-types
+pnpm test
+pnpm build
+```
+
+## Software factory
+
+`/factory run` builds every open GitHub issue labeled `factory` through
+intake → spec → build → gate → review → approve, one PR per issue. State is in
+`factory/jobs/` (gitignored); `factory/bin/job` is its only writer. Checks:
+`factory/checks.sh`. Dashboard: `cd factory && python3 -m http.server`, then
+open http://localhost:8000/dashboard.html.
+
+Each job works in its own git worktree, a full checkout of the repo at
+`.worktrees/<job-id>` (gitignored). A tool run from the repo root that doesn't
+read `.gitignore` sees those copies too; exclude `.worktrees/` in its config.

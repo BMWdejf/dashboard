@@ -183,6 +183,200 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
+  packages/clients/flexi:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jest/globals':
+        specifier: 30.5.2
+        version: 30.5.2
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@repo/jest-config':
+        specifier: workspace:*
+        version: link:../../jest-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@swc/core':
+        specifier: 1.16.18
+        version: 1.16.18(@swc/helpers@0.5.23)
+      '@swc/jest':
+        specifier: 0.2.39
+        version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+      eslint:
+        specifier: 10.13.0
+        version: 10.13.0
+      jest:
+        specifier: 30.5.2
+        version: 30.5.2(@types/node@26.6.5)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@26.6.5)(typescript@7.0.2))
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/clients/shoptet:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jest/globals':
+        specifier: 30.5.2
+        version: 30.5.2
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@repo/jest-config':
+        specifier: workspace:*
+        version: link:../../jest-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@swc/core':
+        specifier: 1.16.18
+        version: 1.16.18(@swc/helpers@0.5.23)
+      '@swc/jest':
+        specifier: 0.2.39
+        version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+      eslint:
+        specifier: 10.13.0
+        version: 10.13.0
+      jest:
+        specifier: 30.5.2
+        version: 30.5.2(@types/node@26.6.5)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@26.6.5)(typescript@7.0.2))
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/core/config:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jest/globals':
+        specifier: 30.5.2
+        version: 30.5.2
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@repo/jest-config':
+        specifier: workspace:*
+        version: link:../../jest-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@swc/core':
+        specifier: 1.16.18
+        version: 1.16.18(@swc/helpers@0.5.23)
+      '@swc/jest':
+        specifier: 0.2.39
+        version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+      eslint:
+        specifier: 10.13.0
+        version: 10.13.0
+      jest:
+        specifier: 30.5.2
+        version: 30.5.2(@types/node@26.6.5)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@26.6.5)(typescript@7.0.2))
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/core/scraper:
+    dependencies:
+      playwright:
+        specifier: 1.65.1
+        version: 1.65.1
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jest/globals':
+        specifier: 30.5.2
+        version: 30.5.2
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@repo/jest-config':
+        specifier: workspace:*
+        version: link:../../jest-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@swc/core':
+        specifier: 1.16.18
+        version: 1.16.18(@swc/helpers@0.5.23)
+      '@swc/jest':
+        specifier: 0.2.39
+        version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+      eslint:
+        specifier: 10.13.0
+        version: 10.13.0
+      jest:
+        specifier: 30.5.2
+        version: 30.5.2(@types/node@26.6.5)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@26.6.5)(typescript@7.0.2))
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/core/sync:
+    dependencies:
+      '@repo/client-flexi':
+        specifier: workspace:*
+        version: link:../../clients/flexi
+      '@repo/client-shoptet':
+        specifier: workspace:*
+        version: link:../../clients/shoptet
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jest/globals':
+        specifier: 30.5.2
+        version: 30.5.2
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@repo/jest-config':
+        specifier: workspace:*
+        version: link:../../jest-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      '@swc/core':
+        specifier: 1.16.18
+        version: 1.16.18(@swc/helpers@0.5.23)
+      '@swc/jest':
+        specifier: 0.2.39
+        version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
+      eslint:
+        specifier: 10.13.0
+        version: 10.13.0
+      jest:
+        specifier: 30.5.2
+        version: 30.5.2(@types/node@26.6.5)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@26.6.5)(typescript@7.0.2))
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
   packages/eslint-config:
     devDependencies:
       '@babel/core':
@@ -3618,6 +3812,16 @@ packages:
   pkg-dir@4.2.0:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
+
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
@@ -7671,6 +7875,12 @@ snapshots:
   pkg-dir@4.2.0:
     dependencies:
       find-up: 4.1.0
+
+  playwright-core@1.65.1: {}
+
+  playwright@1.65.1:
+    dependencies:
+      playwright-core: 1.65.1
 
   pluralize@8.0.0: {}
 

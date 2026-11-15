@@ -1,0 +1,30 @@
+{
+  "data": {
+    "order": {
+      "code": "2026000123",
+      "guid": "1b6c0a52-0000-0000-0000-000000000000",
+      "creationTime": "2026-11-10T09:15:00+0100",
+      "email": "zakaznik@example.com",
+      "billingAddress": {
+        "fullName": "Jana Nováková",
+        "street": "Dlouhá 12",
+        "city": "Brno",
+        "zip": "60200",
+        "countryCode": "CZ"
+      },
+      "price": { "withVat": "605.00", "withoutVat": "500.00", "currencyCode": "CZK" },
+      "items": [
+        {
+          "itemType": "product",
+          "code": "TRIKO-M",
+          "name": "Tričko M",
+          "amount": "2.000",
+          "amountUnit": "ks",
+          "itemPrice": { "withVat": "302.50", "withoutVat": "250.00", "vatRate": "21.00" }
+        }
+      ]
+    }
+  },
+  "errors": null,
+  "metadata": { "requestId": "fixture-1" }
+}

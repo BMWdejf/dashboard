@@ -1,6 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "packages/clients/*"
+  - "packages/core/*"
 allowBuilds:
   "@parcel/watcher": true
   "@swc/core": true
