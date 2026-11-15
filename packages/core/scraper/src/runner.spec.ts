@@ -34,13 +34,22 @@ function fakeBrowser(titles: Record<string, string>, redirects: Record<string, s
     browser: browser as unknown as Browser,
     visited,
     closed: browser.close,
-    route: (url: string, navigation: boolean) => {
+    route: async (
+      url: string,
+      navigation: boolean,
+      response: { status: number; location?: string } = { status: 200 },
+    ) => {
       const r = {
         request: () => ({ url: () => url, isNavigationRequest: () => navigation }),
         abort: jest.fn(async () => {}),
         continue: jest.fn(async () => {}),
+        fetch: jest.fn(async (_opts?: { maxRedirects?: number }) => ({
+          status: () => response.status,
+          headers: () => (response.location ? { location: response.location } : {}),
+        })),
+        fulfill: jest.fn(async () => {}),
       };
-      handler!(r as unknown as Route);
+      await handler!(r as unknown as Route);
       return r;
     },
   };
@@ -111,16 +120,52 @@ describe('scrape', () => {
     });
   });
 
-  it('aborts navigations to other hosts but lets subresources load', async () => {
-    const fake = fakeBrowser({ 'https://shop.example.com/a': 'A' });
-    await scrape(extractor, ['https://shop.example.com/a'], {
-      launch: async () => fake.browser,
-      fetchRobots: noRobots,
-      sleep,
+  describe('request guard', () => {
+    async function guard() {
+      const fake = fakeBrowser({ 'https://shop.example.com/a': 'A' });
+      await scrape(extractor, ['https://shop.example.com/a'], {
+        launch: async () => fake.browser,
+        fetchRobots: noRobots,
+        sleep,
+      });
+      return fake.route;
+    }
+
+    it('aborts navigations to other hosts', async () => {
+      const route = await guard();
+      expect((await route('https://evil.example.org/', true)).abort).toHaveBeenCalled();
     });
 
-    expect(fake.route('http://localhost:8080/admin', true).abort).toHaveBeenCalled();
-    expect(fake.route('https://shop.example.com/b', true).continue).toHaveBeenCalled();
-    expect(fake.route('https://cdn.example.net/img.png', false).continue).toHaveBeenCalled();
+    it('fetches allowed navigations without following redirects', async () => {
+      const route = await guard();
+      const r = await route('https://shop.example.com/b', true);
+      expect(r.fetch).toHaveBeenCalledWith({ maxRedirects: 0 });
+      expect(r.fulfill).toHaveBeenCalled();
+    });
+
+    it('follows a redirect only to an allowed host', async () => {
+      const route = await guard();
+      const ok = await route('https://shop.example.com/old', true, {
+        status: 301,
+        location: '/new',
+      });
+      expect(ok.fulfill).toHaveBeenCalled();
+
+      const bad = await route('https://shop.example.com/go', true, {
+        status: 302,
+        location: 'http://169.254.169.254/latest/meta-data',
+      });
+      expect(bad.abort).toHaveBeenCalled();
+      expect(bad.fulfill).not.toHaveBeenCalled();
+    });
+
+    it('lets public subresources load but blocks private ones', async () => {
+      const route = await guard();
+      expect((await route('https://cdn.example.net/img.png', false)).continue).toHaveBeenCalled();
+      expect((await route('http://192.168.1.1/admin', false)).abort).toHaveBeenCalled();
+      expect((await route('http://localhost:3000/links', false)).abort).toHaveBeenCalled();
+      expect((await route('file:///etc/passwd', false)).abort).toHaveBeenCalled();
+      expect((await route('data:image/png;base64,AAAA', false)).continue).toHaveBeenCalled();
+    });
   });
 });

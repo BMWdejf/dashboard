@@ -54,7 +54,7 @@ other jobs.
   conflicts.
 - Make the simplest change that fully meets the spec. No fallbacks, hidden
   defaults or extras the spec doesn't ask for.
-- Never modify or delete an existing file that matches `protected_paths` in
+- Never add, modify or delete a file that matches `protected_paths` in
   `factory/config.json`; the gate fails the branch if you do. If the spec
   can't be met without changing a protected file, write a BLOCKED build.md
   that says which file and why.

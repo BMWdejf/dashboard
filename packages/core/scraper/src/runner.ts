@@ -1,6 +1,7 @@
 import type { Browser, Page } from 'playwright';
 import type { z } from 'zod';
 
+import { hostAllowed, isPrivateHost, parseHttpUrl } from './network';
 import { parseRobots, type Robots } from './robots';
 
 /**
@@ -41,15 +42,6 @@ async function defaultFetchRobots(origin: string): Promise<string | undefined> {
   return res.status === 200 ? res.text() : undefined;
 }
 
-function hostAllowed(hosts: string[], raw: string): boolean {
-  try {
-    const u = new URL(raw);
-    return (u.protocol === 'https:' || u.protocol === 'http:') && hosts.includes(u.hostname);
-  } catch {
-    return false;
-  }
-}
-
 async function defaultLaunch(): Promise<Browser> {
   const { chromium } = await import('playwright');
   return chromium.launch({ headless: true });
@@ -69,15 +61,44 @@ export async function scrape<S extends z.ZodType>(
   const browser = await (opts.launch ?? defaultLaunch)();
   const context = await browser.newContext({ userAgent });
   try {
-    // Enforce the allow-list on every navigation, including redirects and
-    // frames, not only on the URL we start from. Subresources (CDN images,
-    // fonts) may load from other hosts; documents may not.
-    await context.route('**/*', (route) => {
+    // Guard every request the browser makes, not only the URLs we start from:
+    // - documents (navigations, frames) must stay on the extractor's hosts,
+    //   and each redirect hop is checked before the browser follows it;
+    // - subresources (images, fonts, scripts from a CDN) may come from other
+    //   hosts, but never from loopback, private or link-local addresses.
+    await context.route('**/*', async (route) => {
       const req = route.request();
-      if (req.isNavigationRequest() && !hostAllowed(extractor.hosts, req.url())) {
-        return route.abort('blockedbyclient');
+      const target = parseHttpUrl(req.url());
+      if (!target) {
+        return /^(data|blob):/.test(req.url()) ? route.continue() : route.abort('blockedbyclient');
       }
-      return route.continue();
+      if (isPrivateHost(target.hostname)) return route.abort('blockedbyclient');
+      if (!req.isNavigationRequest()) return route.continue();
+      if (!hostAllowed(extractor.hosts, req.url())) return route.abort('blockedbyclient');
+
+      // Playwright doesn't route redirect hops, so fetch without following
+      // redirects, check Location, and hand the response back to the browser.
+      // Its follow-up request comes through this handler again.
+      let response;
+      try {
+        response = await route.fetch({ maxRedirects: 0 });
+      } catch {
+        return route.abort('failed');
+      }
+      const status = response.status();
+      if (status >= 300 && status < 400) {
+        const location = response.headers()['location'];
+        let next: string | undefined;
+        try {
+          next = location ? new URL(location, req.url()).toString() : undefined;
+        } catch {
+          next = undefined;
+        }
+        if (!next || !hostAllowed(extractor.hosts, next)) {
+          return route.abort('blockedbyclient');
+        }
+      }
+      return route.fulfill({ response });
     });
     let first = true;
     for (const raw of urls) {
@@ -122,7 +143,13 @@ export async function scrape<S extends z.ZodType>(
         if (!hostAllowed(extractor.hosts, page.url())) {
           throw new Error(`navigated outside allowed hosts: ${new URL(page.url()).hostname}`);
         }
-        const parsed = extractor.schema.safeParse(await extractor.extract(page, url));
+        const extracted = await extractor.extract(page, url);
+        // The page's own scripts may navigate while we extract; drop the result
+        // unless we are still on an allowed host.
+        if (!hostAllowed(extractor.hosts, page.url())) {
+          throw new Error(`navigated outside allowed hosts: ${new URL(page.url()).hostname}`);
+        }
+        const parsed = extractor.schema.safeParse(extracted);
         results.push(
           parsed.success
             ? { url: raw, ok: true, data: parsed.data }

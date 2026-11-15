@@ -15,6 +15,16 @@ does the following:
 
 You only write the extractor.
 
+The runner also guards every request the browser makes (`src/network.ts`):
+
+- documents and every redirect hop must stay on `hosts`;
+- subresources may come from other hosts, but never from loopback, private or
+  link-local addresses.
+
+These checks look at URLs, not at DNS answers. Run the scraper (the worker) in a
+container whose egress can't reach the internal network, and don't weaken the
+guards in an extractor.
+
 ## 0. Is it allowed?
 
 Before writing code, check and note in the PR:
