@@ -64,3 +64,4 @@ pnpm-debug.log*
 # Software factory
 /factory/jobs/
 /.worktrees/
+.neon

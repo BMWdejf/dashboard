@@ -9,16 +9,27 @@ General Neon Auth knowledge (packages, env, Next.js setup, plugin limits) is in
 the `neon:neon-auth` skill. Read it, and the live quickstart it links, before
 writing auth code. This skill holds **this project's** decisions.
 
-> Status: not implemented yet. The approver escalates every auth change to a
-> human.
+> Status: e-mail sign-up and sign-in work in `apps/web`. Not yet done: the
+> invite-only `AccessGrant` check, roles, Google, and the API `AuthGuard`. The
+> approver escalates every auth change to a human.
+>
+> What exists: `apps/web/lib/auth/server.ts` (`getAuth()`, lazy, env checked by
+> `authEnv` from `@repo/core-config`), `app/api/auth/[...path]/route.ts`,
+> `proxy.ts` (protects `/account`), `app/auth/{actions.ts,AuthForm.tsx,sign-up,sign-in}`
+> and `app/account/page.tsx`.
 
 ## Decisions
 
 - **Provider**: Neon Auth (managed Better Auth). Users and sessions live in
   the `neon_auth` schema of our Neon database and branch with it.
-- **Sign-in method**: Google OAuth only. No passwords. The shared Google
-  credentials are for development only; production needs our own Google OAuth
-  app. The redirect is `{NEON_AUTH_BASE_URL}/callback/google`.
+- **Sign-in methods**: e-mail + password (implemented), Google OAuth (planned).
+  The shared Google credentials are for development only; production needs our
+  own Google OAuth app. The redirect is `{NEON_AUTH_BASE_URL}/callback/google`.
+- **Database**: Neon project `admin-dashboard-postgres`, branch `main`,
+  database `dashboard` (`neon neon-auth status` shows it). The branch holds
+  other projects' databases too; never enable auth or migrate in those.
+- **SDK**: `@neon/auth` (the current package name; older docs say
+  `@neondatabase/auth`).
 - **Who gets in: invite-only.** Anyone can authenticate with Google, but only
   e-mails listed in our `AccessGrant` table (see `db`) get access. Everyone
   else sees "Nemáte přístup, požádejte správce o pozvánku" and nothing else.
@@ -40,7 +51,9 @@ Follow the Next.js part of `neon:neon-auth`:
   static assets public.
 - Every server component, route handler and server action that reads data
   checks `auth.getSession()` itself. The middleware redirect is not access control.
-- The sign-in page has one button: `signIn.social({ provider: 'google', callbackURL })`.
+- Sign-up and sign-in are server actions in `app/auth/actions.ts` calling
+  `getAuth().signUp.email` / `signIn.email`. Google will add
+  `signIn.social({ provider: 'google', callbackURL })`.
 
 ## API (`apps/api`)
 

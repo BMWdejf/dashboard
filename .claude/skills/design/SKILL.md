@@ -17,8 +17,14 @@ This skill holds **this project's** rules.
 
 ## The design file
 
-- **File**: _not set yet_. Once the design exists, put its URL here and in
-  `AGENTS.md`.
+- **File**: no Figma link yet. Exports from the Figma Raw plugin live in
+  `design/figma/*.json` (`Sign Up`, `Sign In`, `Recovery`, `Dashboard-1`).
+  **Check that folder before building any screen.** The exports stop a few
+  levels deep (inputs, button labels and icons are missing), so infer those
+  from the palette and say so in the PR. A Figma link gives the full detail
+  through the MCP.
+- **Built so far**: `/auth/sign-up` and `/auth/sign-in` (`apps/web/app/auth/`)
+  from `Sign Up.json` / `Sign In.json`.
 - **Source of truth**: the pages `Screens` (finished screens) and
   `Components` (the library). Frames in other pages are drafts. Don't build
   from them unless the task links one explicitly.
@@ -28,6 +34,10 @@ This skill holds **this project's** rules.
 ## Tokens
 
 Figma variables map 1:1 to CSS custom properties in `apps/web/app/globals.css`:
+
+The tokens taken from the exports are in `apps/web/app/globals.css`
+(`--color-*`, `--radius-*`, `--font-display` = Plus Jakarta Sans,
+`--font-ui` = Inter, both from `@fontsource-variable/*`). The design is dark-only.
 
 | Figma collection | CSS | Example |
 |---|---|---|

@@ -53,3 +53,11 @@ export const scraperEnv = z.object({
   SCRAPER_MIN_DELAY_MS: z.coerce.number().int().min(0).default(2000),
 });
 export type ScraperEnv = z.infer<typeof scraperEnv>;
+
+/** Neon Auth (managed Better Auth) for the web app. */
+export const authEnv = z.object({
+  NEON_AUTH_BASE_URL: z.url(),
+  /** Signs the cached session cookie; at least 32 characters. */
+  NEON_AUTH_COOKIE_SECRET: z.string().min(32),
+});
+export type AuthEnv = z.infer<typeof authEnv>;

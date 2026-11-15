@@ -1,0 +1,311 @@
+/* Auth screens, built from design/figma/Sign Up.json and Sign In.json. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  color-scheme: dark;
+}
+
+.main {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 64px 28px 40px;
+  overflow: hidden;
+}
+
+/* Background glows: blurred circles behind the card. */
+.glows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 9999px;
+}
+
+.glowPink {
+  width: 384px;
+  height: 384px;
+  background: var(--color-glow-pink);
+  opacity: 0.1;
+  filter: blur(120px);
+  transform: translate(-95%, -75%);
+}
+
+.glowViolet {
+  width: 480px;
+  height: 480px;
+  background: var(--color-glow-violet);
+  opacity: 0.15;
+  filter: blur(140px);
+  transform: translate(-5%, -30%);
+}
+
+.glowCyan {
+  width: 607px;
+  height: 288px;
+  background: var(--color-glow-cyan);
+  opacity: 0.05;
+  filter: blur(150px);
+  transform: translate(-50%, 40%);
+}
+
+/* Card */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* Sign Up: translucent, blurred, 24px padding */
+.cardSignUp {
+  padding: 24px;
+  background: var(--color-surface-translucent);
+  backdrop-filter: blur(40px);
+}
+
+/* Sign In: opaque, 40px padding, gradient hairline on top */
+.cardSignIn {
+  padding: 40px;
+  background: var(--color-surface);
+}
+
+.cardSignIn::before {
+  position: absolute;
+  top: 0;
+  left: 32px;
+  right: 32px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  content: '';
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.cardSignIn .header {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--color-badge);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 12px;
+}
+
+.badge::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  content: '';
+}
+
+.title {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 38px;
+  letter-spacing: -0.8px;
+}
+
+.subtitle {
+  padding-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardSignIn .form {
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.field input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.field input:focus-visible {
+  border-color: var(--color-accent);
+  outline: 2px solid rgba(203, 60, 255, 0.25);
+  outline-offset: 0;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.submit {
+  height: 44px;
+  margin-top: 4px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--color-accent);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.submit:hover {
+  background: var(--color-accent-deep);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* "Already have an account? Sign in" */
+.alt {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.alt a {
+  color: var(--color-link);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.alt a:hover {
+  text-decoration: underline;
+}
+
+/* Sign In: the "no account yet" note sits in a soft overlay panel */
+.cardSignIn .alt {
+  padding: 12px 16px;
+  border-radius: var(--radius-panel);
+  background: var(--color-overlay);
+}
+
+/* Account page */
+.account {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.account strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+.brand {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.copyright {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+@media (max-width: 520px) {
+  .main {
+    padding: 32px 16px;
+  }
+
+  .cardSignIn {
+    padding: 24px;
+  }
+
+  .title {
+    font-size: 26px;
+    line-height: 32px;
+  }
+}

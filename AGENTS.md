@@ -2,7 +2,9 @@
 
 A Turborepo monorepo (pnpm workspaces):
 
-- `apps/web`: Next.js App Router frontend. Shows the links from the API.
+- `apps/web`: Next.js App Router frontend. Shows the links from the API, and
+  has e-mail sign-up/sign-in with Neon Auth (`/auth/sign-up`, `/auth/sign-in`,
+  protected `/account`).
 - `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
@@ -60,7 +62,21 @@ A fresh checkout needs only:
 pnpm install --frozen-lockfile
 ```
 
-There are no `.env` files to copy. Node `>=26.12.0`, pnpm 10.
+Node `>=26.12.0`, pnpm 10.
+
+Env files are never committed. The repo is linked to the Neon project
+`admin-dashboard-postgres` (`neon.ts`, `.neon`), database `dashboard`. To get them:
+
+```bash
+neon env pull -s auth                          # .env.local (root)
+neon env pull -s auth --file apps/web/.env.local
+```
+
+Then add `NEON_AUTH_COOKIE_SECRET` (`openssl rand -base64 32`) to
+`apps/web/.env.local`, and `DATABASE_URL` / `DATABASE_URL_UNPOOLED` for the
+`dashboard` database (`neon connection-string main --database-name dashboard
+[--pooled]`) to the root `.env.local`. The branch has several databases, so
+`neon env pull` can't pick the database itself.
 
 ## Dev servers
 
