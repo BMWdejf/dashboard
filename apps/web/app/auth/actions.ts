@@ -8,6 +8,13 @@ export type AuthFormState = { error?: string } | undefined;
 
 const field = (form: FormData, name: string) => String(form.get(name) ?? '').trim();
 
+/** Better Auth error codes that are safe to show: they don't depend on the e-mail. */
+const SIGN_UP_ERRORS: Record<string, string> = {
+  PASSWORD_TOO_SHORT: 'Heslo je příliš krátké.',
+  PASSWORD_TOO_LONG: 'Heslo je příliš dlouhé.',
+  INVALID_EMAIL: 'Zadejte platný e-mail.',
+};
+
 export async function signUp(_prev: AuthFormState, form: FormData): Promise<AuthFormState> {
   const name = field(form, 'name');
   const email = field(form, 'email').toLowerCase();
@@ -16,7 +23,13 @@ export async function signUp(_prev: AuthFormState, form: FormData): Promise<Auth
     return { error: 'Vyplňte jméno, e-mail a heslo (alespoň 8 znaků).' };
   }
   const { error } = await getAuth().signUp.email({ name, email, password });
-  if (error) return { error: error.message ?? 'Registrace se nezdařila.' };
+  if (error) {
+    // Upstream messages such as "user already exists" would reveal who has an
+    // account. Show only password-policy errors, which say nothing about the
+    // e-mail; log the code (never the e-mail) on the server.
+    console.warn('sign-up failed', { status: error.status, code: error.code });
+    return { error: SIGN_UP_ERRORS[error.code ?? ''] ?? 'Registrace se nezdařila. Zkuste to znovu, nebo se přihlaste.' };
+  }
   redirect('/account');
 }
 
