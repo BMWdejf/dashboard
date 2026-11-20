@@ -18,6 +18,7 @@
         "NEON_AUTH_BASE_URL",
         "NEON_AUTH_COOKIE_SECRET",
         "DATABASE_URL",
+        "SYNC_API_TOKEN",
         "NODE_ENV"
       ]
     },
@@ -42,6 +43,12 @@
     "test:e2e": {
       "dependsOn": [
         "^build"
+      ]
+    },
+    "@repo/core-db#check-types": {
+      "dependsOn": [
+        "^build",
+        "build"
       ]
     }
   }

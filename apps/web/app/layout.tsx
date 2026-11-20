@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 
+import { readLocaleCookie } from '../lib/locale';
 import { readThemeCookie } from '../lib/theme';
 
 const geistSans = localFont({
@@ -25,8 +26,10 @@ export default async function RootLayout({
 }>) {
   // dark | light | system, from the user's saved preference (see lib/theme.ts)
   const theme = await readThemeCookie();
+  // cs | en, from the user's saved language (see lib/locale.ts)
+  const lang = await readLocaleCookie();
   return (
-    <html lang="cs" data-theme={theme}>
+    <html lang={lang} data-theme={theme}>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>

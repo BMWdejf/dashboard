@@ -62,6 +62,16 @@ export const authEnv = z.object({
 });
 export type AuthEnv = z.infer<typeof authEnv>;
 
+/**
+ * Flexi → Neon sync API (apps/api /sync/flexi). Without a token the endpoints
+ * answer 503, so the sync can't be started by anyone by accident.
+ */
+export const syncEnv = z.object({
+  /** Bearer token for POST /sync/flexi and GET /sync/flexi/cron; at least 32 characters. */
+  SYNC_API_TOKEN: z.string().min(32).optional(),
+});
+export type SyncEnv = z.infer<typeof syncEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),

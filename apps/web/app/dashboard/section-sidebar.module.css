@@ -1,0 +1,355 @@
+/*
+ * Sidebar from design/figma/Products.json ("Aside - LeftSidebar", 300x1028):
+ * canvas background, right border #343b4f99, 20px side padding (259px content),
+ * logo header 32px, menu 24px below, items 40px / radius 8 / padding 12px,
+ * quick search 38px under the menu, and the user + CTA block at the bottom
+ * (padding 20px, gap 16px, top border).
+ */
+
+/* `aside.` raises specificity over .sidebar from dashboard.module.css. */
+aside.aside {
+  gap: 0;
+  padding: 0;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: var(--color-bg);
+}
+
+.top {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 24px 20px;
+  overflow-y: auto;
+}
+
+.logoHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 32px;
+  padding: 0 4px;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7f25fb, #cb3cff);
+}
+
+/* The menu fills the column, so the quick search sits at its bottom (design: y 833). */
+.menu {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 24px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupHead,
+.navLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 40px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.groupHead {
+  justify-content: flex-start;
+  color: var(--color-accent);
+}
+
+.groupHead > span:nth-child(2) {
+  flex: 1;
+}
+
+.groupIcon {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  box-shadow: inset 0 -5px 0 -3.5px currentColor;
+}
+
+.chevronDown {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+a.navLink:hover,
+a.groupHead:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.navLink[aria-current='page'] {
+  background: var(--color-surface);
+  color: var(--color-accent);
+}
+
+.subList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 40px;
+  list-style: none;
+}
+
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+a.subItem:hover {
+  color: var(--color-text);
+}
+
+.subItem[aria-current='page'] {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.soon {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+.soonTag {
+  padding: 1px 6px;
+  border-radius: var(--radius-badge);
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.navLink .soonTag {
+  margin-left: auto;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  margin: 8px 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+.empty {
+  padding: 8px 12px;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+}
+
+.quickSearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.quickSearch > span[aria-hidden] {
+  left: 12px;
+}
+
+.quickSearch input {
+  width: 100%;
+  height: 38px;
+  padding: 10px 12px 9px 36px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.quickSearch input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.quickSearch input:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Bottom: user profile and CTA */
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.avatarRing {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #cb3cff, #05c168);
+}
+
+.avatarRing span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profileText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profileText strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileText span {
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.chevronRight {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-top: 1.33px solid var(--color-text-subtle);
+  border-right: 1.33px solid var(--color-text-subtle);
+  transform: rotate(45deg);
+}
+
+.profile:hover .profileText span {
+  color: var(--color-text);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #cb3cff, #7f25fb);
+  box-shadow:
+    0 4px 6px -4px rgba(203, 60, 255, 0.2),
+    0 10px 15px -3px rgba(203, 60, 255, 0.2);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.cta:hover {
+  filter: brightness(1.1);
+}
+
+.cta:focus-visible,
+.profile:focus-visible,
+.navLink:focus-visible,
+.groupHead:focus-visible,
+.subItem:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* Arrow icon of the CTA (design: 12x9 vector) */
+.ctaIcon {
+  position: relative;
+  width: 12px;
+  height: 1.33px;
+  background: currentColor;
+}
+
+.ctaIcon::after {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  border-top: 1.33px solid currentColor;
+  border-right: 1.33px solid currentColor;
+  transform: rotate(45deg);
+  content: '';
+}
+
+/* Main column of this layout: the page sets its own padding (32px). */
+.main {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  aside.aside {
+    padding: 0;
+  }
+
+  .logoHeader {
+    display: none;
+  }
+
+  .menu {
+    padding-top: 8px;
+  }
+}

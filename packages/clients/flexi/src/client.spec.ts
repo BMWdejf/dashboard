@@ -84,4 +84,39 @@ describe('FlexiClient', () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(json({}, 404));
     expect(await make(fetchMock).get('cenik', code('NEEXISTUJE'))).toBeUndefined();
   });
+
+  it('reads the Changes API with its version cursor', async () => {
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
+      json({
+        winstrom: {
+          '@globalVersion': '1008522',
+          changes: [{ '@evidence': 'cenik', '@in-version': '2126', '@operation': 'delete', id: '164' }],
+          next: '2127',
+        },
+      }),
+    );
+    const res = await make(fetchMock).changes({ start: 2000, limit: 100 });
+    expect(res).toEqual({
+      changes: [{ '@evidence': 'cenik', '@in-version': '2126', '@operation': 'delete', id: '164' }],
+      globalVersion: 1008522,
+      next: 2127,
+    });
+    expect(String(fetchMock.mock.calls[0]![0])).toBe(
+      'https://flexi.example.com:5434/c/demo_sro/changes.json?start=2000&limit=100',
+    );
+  });
+
+  it('sends its own User-Agent', async () => {
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(json({ winstrom: { sklad: [] } }));
+    await make(fetchMock).list('sklad');
+    const headers = fetchMock.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['User-Agent']).toBe('dashboard-flexi-client/0.1');
+  });
+
+  it('treats next=none as the end of the changelog', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValue(json({ winstrom: { '@globalVersion': '5', changes: [], next: 'none' } }));
+    expect((await make(fetchMock).changes()).next).toBeUndefined();
+  });
 });

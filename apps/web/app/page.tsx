@@ -4,34 +4,21 @@ import { redirect } from 'next/navigation';
 import { BarChart, deviceColor, Gauge, LineChart, Sparkline } from './dashboard/charts';
 import { DashboardShell } from './dashboard/DashboardShell';
 import styles from './dashboard/dashboard.module.css';
-import {
-  fmtCompact,
-  fmtDate,
-  fmtMoney,
-  fmtMoneyCompact,
-  fmtPct,
-  fmtWhole,
-} from './dashboard/format';
+import { formatters } from './dashboard/format';
 import { getAuth } from '../lib/auth/server';
+import { fill } from '../lib/i18n';
+import { getI18n } from '../lib/locale';
 
 // Reads the session and the example data on every request.
 export const dynamic = 'force-dynamic';
 
-const KPI_LABELS: Record<string, string> = {
-  Pageviews: 'Zobrazení stránek',
-  'Monthly users': 'Měsíční uživatelé',
-  'New sign ups': 'Nové registrace',
-  Subscriptions: 'Předplatné',
-};
-
-const STATUS: Record<string, string> = { paid: 'Zaplaceno', pending: 'Čeká' };
-
-function Trend({ value }: { value: number | null }) {
+function Trend({ value, format }: { value: number | null; format: (n: number) => string }) {
   if (value === null) return null;
-  return (
-    <span className={value >= 0 ? styles.trendUp : styles.trendDown}>{fmtPct(value)}</span>
-  );
+  return <span className={value >= 0 ? styles.trendUp : styles.trendDown}>{format(value)}</span>;
 }
+
+/** Label from a dictionary map, or the raw label when it isn't translated. */
+const label = (map: Record<string, string>, key: string) => map[key] ?? key;
 
 async function loadData(): Promise<DashboardExamples | null> {
   try {
@@ -48,34 +35,39 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/auth/sign-in');
   const { user } = session;
   const data = await loadData();
+  const { locale, t } = await getI18n();
+  const h = t.home;
+  const f = formatters(locale);
+  const fmtCompact = f.compact;
+  const fmtWhole = f.whole;
+  const fmtMoney = f.money;
+  const fmtMoneyCompact = f.moneyCompact;
+  const fmtDate = f.date;
 
   return (
     <DashboardShell user={user} active="/">
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Přehled reportů</p>
-        <h1 className={styles.title}>Vítejte zpět, {user.name}</h1>
+        <p className={styles.eyebrow}>{h.eyebrow}</p>
+        <h1 className={styles.title}>{fill(h.welcome, { name: user.name })}</h1>
         <p className={styles.subtitle}>
-          Měřte návratnost reklamy a sledujte návštěvnost webu.
-          <span className={styles.exampleTag}>Ukázková data z tabulky examples_data</span>
+          {h.subtitle}
+          <span className={styles.exampleTag}>{h.exampleTag}</span>
         </p>
       </header>
 
       {!data ? (
         <section className={styles.card} role="alert">
-          <h2 className={styles.cardTitle}>Data se nepodařilo načíst</h2>
-          <p className={styles.cardText}>
-            Dashboard nemá spojení s databází. Zkontrolujte proměnnou DATABASE_URL a že je v
-            databázi tabulka examples_data.
-          </p>
+          <h2 className={styles.cardTitle}>{h.loadErrorTitle}</h2>
+          <p className={styles.cardText}>{h.loadErrorText}</p>
         </section>
       ) : (
         <div className={styles.stack}>
-          <section className={styles.kpis} aria-label="Klíčové ukazatele">
+          <section className={styles.kpis} aria-label={h.kpisLabel}>
             {data.kpis.map((k) => (
               <article key={k.label} className={styles.card}>
-                <h2 className={styles.cardTitle}>{KPI_LABELS[k.label] ?? k.label}</h2>
+                <h2 className={styles.cardTitle}>{label(h.kpi, k.label)}</h2>
                 <p className={styles.metric}>
-                  {fmtCompact(k.value)} <Trend value={k.changePct} />
+                  {fmtCompact(k.value)} <Trend value={k.changePct} format={f.pct} />
                 </p>
               </article>
             ))}
@@ -85,29 +77,29 @@ export default async function DashboardPage() {
             <article className={`${styles.card} ${styles.wide}`}>
               <div className={styles.cardHead}>
                 <div>
-                  <h2 className={styles.cardTitle}>Celkové tržby</h2>
+                  <h2 className={styles.cardTitle}>{h.totalRevenue}</h2>
                   <p className={styles.metric}>
                     {data.summary.totalRevenue !== null
                       ? fmtMoneyCompact(data.summary.totalRevenue)
                       : '—'}{' '}
-                    <Trend value={data.summary.totalRevenueChange} />
+                    <Trend value={data.summary.totalRevenueChange} format={f.pct} />
                   </p>
                 </div>
                 <ul className={styles.legend}>
                   <li>
-                    <span className={styles.legendRevenue} /> Tržby
+                    <span className={styles.legendRevenue} /> {h.revenue}
                   </li>
                   <li>
-                    <span className={styles.legendExpenses} /> Náklady
+                    <span className={styles.legendExpenses} /> {h.expenses}
                   </li>
                 </ul>
               </div>
               <LineChart
-                label="Tržby a náklady po měsících"
+                label={h.revenueChart}
                 labels={data.revenue.map((r) => r.label)}
                 series={[
-                  { label: 'Tržby', color: 'var(--chart-1)', values: data.revenue.map((r) => r.revenue) },
-                  { label: 'Náklady', color: 'var(--chart-2)', values: data.revenue.map((r) => r.expenses) },
+                  { label: h.revenue, color: 'var(--chart-1)', values: data.revenue.map((r) => r.revenue) },
+                  { label: h.expenses, color: 'var(--chart-2)', values: data.revenue.map((r) => r.expenses) },
                 ]}
                 formatTick={(n) => fmtMoneyCompact(n)}
               />
@@ -115,22 +107,24 @@ export default async function DashboardPage() {
 
             <div className={styles.column}>
               <article className={styles.card}>
-                <h2 className={styles.cardTitle}>Celkový zisk · posledních 12 měsíců</h2>
+                <h2 className={styles.cardTitle}>{h.totalProfit}</h2>
                 <p className={styles.metric}>
                   {data.summary.totalProfit !== null ? fmtMoneyCompact(data.summary.totalProfit) : '—'}{' '}
-                  <Trend value={data.summary.totalProfitChange} />
+                  <Trend value={data.summary.totalProfitChange} format={f.pct} />
                 </p>
-                <BarChart label="Zisk po měsících" points={data.profit} />
+                <BarChart label={h.profitChart} points={data.profit} />
               </article>
               <article className={styles.card}>
-                <h2 className={styles.cardTitle}>Celkem relací</h2>
+                <h2 className={styles.cardTitle}>{h.totalSessions}</h2>
                 <p className={styles.metric}>
                   {data.summary.totalSessions !== null ? fmtWhole(data.summary.totalSessions) : '—'}{' '}
-                  <Trend value={data.summary.totalSessionsChange} />
+                  <Trend value={data.summary.totalSessionsChange} format={f.pct} />
                 </p>
-                <Sparkline label="Relace během dne" points={data.sessions} />
+                <Sparkline label={h.sessionsChart} points={data.sessions} />
                 {data.summary.visitors !== null && (
-                  <p className={styles.cardText}>{fmtCompact(data.summary.visitors)} návštěvníků</p>
+                  <p className={styles.cardText}>
+                    {fill(h.visitors, { n: fmtCompact(data.summary.visitors) })}
+                  </p>
                 )}
               </article>
             </div>
@@ -138,7 +132,7 @@ export default async function DashboardPage() {
 
           <div className={styles.row}>
             <article className={styles.card}>
-              <h2 className={styles.cardTitle}>Uživatelé podle zařízení</h2>
+              <h2 className={styles.cardTitle}>{h.byDevice}</h2>
               <Gauge
                 parts={data.devices}
                 total={fmtWhole(data.devices.reduce((a, d) => a + d.value, 0))}
@@ -147,13 +141,7 @@ export default async function DashboardPage() {
                 {data.devices.map((d, i) => (
                   <li key={d.label}>
                     <span className={styles.swatch} style={{ background: deviceColor(i) }} />
-                    {d.label === 'Desktop users'
-                      ? 'Počítače'
-                      : d.label === 'Phone app users'
-                        ? 'Mobilní aplikace'
-                        : d.label === 'Laptop users'
-                          ? 'Notebooky'
-                          : d.label}
+                    {label(h.devices, d.label)}
                     <strong>{fmtWhole(d.value)}</strong>
                   </li>
                 ))}
@@ -161,10 +149,10 @@ export default async function DashboardPage() {
             </article>
 
             <article className={`${styles.card} ${styles.wide}`}>
-              <h2 className={styles.cardTitle}>Uživatelé podle země</h2>
+              <h2 className={styles.cardTitle}>{h.byCountry}</h2>
               <p className={styles.metric}>
                 {data.summary.countryUsers !== null ? fmtCompact(data.summary.countryUsers) : '—'}{' '}
-                <Trend value={data.summary.countryUsersChange} />
+                <Trend value={data.summary.countryUsersChange} format={f.pct} />
               </p>
               <ul className={styles.countries}>
                 {data.countries.map((c) => (
@@ -173,7 +161,7 @@ export default async function DashboardPage() {
                     <span className={styles.bar}>
                       <span style={{ width: `${Math.min(100, c.share)}%` }} />
                     </span>
-                    <span className={styles.countryShare}>{c.share} %</span>
+                    <span className={styles.countryShare}>{f.share(c.share)}</span>
                   </li>
                 ))}
               </ul>
@@ -181,16 +169,16 @@ export default async function DashboardPage() {
           </div>
 
           <article className={styles.card}>
-            <h2 className={styles.cardTitle}>Poslední objednávky</h2>
+            <h2 className={styles.cardTitle}>{h.lastOrders}</h2>
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th scope="col">Objednávka</th>
-                    <th scope="col">Datum</th>
-                    <th scope="col">Stav</th>
+                    <th scope="col">{h.order}</th>
+                    <th scope="col">{h.date}</th>
+                    <th scope="col">{h.status}</th>
                     <th scope="col" className={styles.num}>
-                      Celkem
+                      {h.total}
                     </th>
                   </tr>
                 </thead>
@@ -201,7 +189,7 @@ export default async function DashboardPage() {
                       <td>{fmtDate(o.date)}</td>
                       <td>
                         <span className={o.status === 'paid' ? styles.badgePaid : styles.badgePending}>
-                          {STATUS[o.status] ?? o.status}
+                          {label(h.orderStatus, o.status)}
                         </span>
                       </td>
                       <td className={styles.num}>{fmtMoney(o.total)}</td>

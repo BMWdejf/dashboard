@@ -50,14 +50,49 @@ An evidence's fields are listed by the server itself at
 - Develop against a **copy of the company** or the demo server. Never against
   the live accounting company.
 
+## Facts found on the demo (11/2026)
+
+- The public demo (`https://demo.flexibee.eu:5434`, company `demo`, user
+  `winstrom`/`winstrom`) answers `Request blocked` to the User-Agent `node`.
+  `FlexiClient` sends `dashboard-flexi-client/0.1` (option `userAgent`).
+- Everything is a string; empty = `""`. A reference comes as `code:X` plus
+  `<field>@ref` = `/c/demo/<evidence>/<id>.json` (the internal id).
+- Filters accept ISO timestamps with `Z`: `(lastUpdate gte '2026-11-18T18:00:00.000Z')`.
+  `order=id` and `limit=0` (= all) work.
+- `cenik.sumStavMj` = sum of `skladova-karta.stavMJ` of the current period, but
+  `cenik.lastUpdate` does not change when stock moves: read the cards.
+- Code lists may repeat `kod` (two `sklad` with `NOVÉ0`); `cenik` and `adresar` don't.
+- Stock movements: `skladovy-pohyb-polozka` (`mnozMjPrijem`, `mnozMjVydej`,
+  `datVyst`, `storno`). Without `storno = true` lines their sum equals the stock;
+  with them it doesn't. Initial balances typed by hand into a period are not
+  movements, so absolute sums may differ (demo `DRÁT`), changes over time don't.
+- Changes API (`/changes.json?start=<v>`): `@globalVersion`, `next`, entries with
+  `@operation` create/update/delete. `changes/status.json` says if it is on.
+- Every request we use is in the Postman workspace and collection
+  "Dashboard Flexibee API" (environment "Flexi demo").
+
+## Mirror sync (Flexi → Neon)
+
+- Pure mapping and the run: `packages/core/sync/src/flexi-mirror/` (`evidences.ts`
+  fields and filters, `map.ts`, `run.ts`). Fixtures from the demo: `fixtures/demo-records.json`.
+- Run it: `pnpm --filter api sync:flexi [--full]`, or `POST /sync/flexi[?full=true]`
+  and `GET /sync/flexi/cron` on the API with `Authorization: Bearer $SYNC_API_TOKEN`.
+- Read-only towards Flexi; the client stays in dry-run.
+- Stock history backfill (`movements.ts`): once, on the first run (or with
+  `--backfill-history[=days]`), the history is rebuilt 400 days back from
+  movements: stock after day D = current stock − Σ changes after D. Written only
+  before each product's first real history row.
+
 ## Evidences we use
 
 | Evidence | What | Notes |
 |---|---|---|
 | `objednavka-prijata` | received order | lines in `polozkyObchDokladu` |
 | `adresar` | customers and suppliers | `ic`, `dic` |
-| `cenik` | price list (products) | `kod` = Shoptet product code |
-| `skladova-karta` / `skladovy-pohyb` | stock | read-only for us for now |
+| `cenik` | price list (products) | `kod` = Shoptet product code; mirrored to Neon |
+| `skupina-zbozi`, `merna-jednotka`, `sklad`, `typ-atributu`, `ucetni-obdobi` | code lists | mirrored whole every run |
+| `atribut`, `odberatel`, `dodavatel`, `priloha` | product attributes, prices, attachments | mirrored (only rows linked to `cenik`) |
+| `skladova-karta` / `skladovy-pohyb` | stock | read-only; cards of the current period are mirrored |
 | `faktura-vydana` | issued invoice | ESCALATE: accounting document |
 
 ## Never

@@ -15,7 +15,14 @@ export interface FlexiClientOptions {
    */
   dryRun?: boolean;
   fetch?: typeof fetch;
+  /**
+   * Sent as User-Agent. Some Flexi servers (the public demo among them) block
+   * Node's default `node` agent with "Request blocked".
+   */
+  userAgent?: string;
 }
+
+export const DEFAULT_FLEXI_USER_AGENT = 'dashboard-flexi-client/0.1';
 
 export interface ListOptions {
   /** Flexi filter expression, e.g. `kod='TRIKO-M'` or `lastUpdate gt '2026-01-01'`. */
@@ -42,6 +49,16 @@ const writeResponse = z.object({
 
 export type FlexiWriteResult = z.infer<typeof writeResult>;
 
+/** One entry of the Changes API. */
+export interface FlexiChange {
+  '@evidence': string;
+  '@in-version': string;
+  '@operation': 'create' | 'update' | 'delete';
+  '@timestamp'?: string;
+  id: string;
+  'external-ids'?: string[];
+}
+
 export class FlexiApiError extends Error {
   constructor(
     public readonly status: number,
@@ -57,12 +74,14 @@ export class FlexiClient {
   private readonly auth: string;
   private readonly dryRun: boolean;
   private readonly fetchImpl: typeof fetch;
+  private readonly userAgent: string;
 
   constructor(opts: FlexiClientOptions) {
     this.base = `${opts.url.replace(/\/$/, '')}/c/${encodeURIComponent(opts.company)}`;
     this.auth = 'Basic ' + Buffer.from(`${opts.user}:${opts.password}`).toString('base64');
     this.dryRun = opts.dryRun ?? true;
     this.fetchImpl = opts.fetch ?? fetch;
+    this.userAgent = opts.userAgent ?? DEFAULT_FLEXI_USER_AGENT;
   }
 
   get isDryRun(): boolean {
@@ -87,6 +106,29 @@ export class FlexiClient {
     const rows = (winstrom[evidence] as T[] | undefined) ?? [];
     const rowCount = winstrom['@rowCount'] !== undefined ? Number(winstrom['@rowCount']) : undefined;
     return { rows, rowCount };
+  }
+
+  /**
+   * Changes API (`/changes.json`): every create/update/delete since `start`, in
+   * version order. Needs the changelog enabled in the company (`changes/status`).
+   * `next` is the version to pass as `start` next time (undefined = no more).
+   */
+  async changes(
+    opts: { start?: number; limit?: number; evidence?: string } = {},
+  ): Promise<{ changes: FlexiChange[]; globalVersion?: number; next?: number }> {
+    const url = new URL(`${this.base}/changes.json`);
+    if (opts.start !== undefined) url.searchParams.set('start', String(opts.start));
+    if (opts.limit !== undefined) url.searchParams.set('limit', String(opts.limit));
+    if (opts.evidence) url.searchParams.set('evidence', opts.evidence);
+    const body = (await this.send('GET', url)) as { winstrom?: Record<string, unknown> };
+    const w = body.winstrom ?? {};
+    const toNum = (v: unknown) =>
+      v === undefined || v === 'none' || v === '' ? undefined : Number(v);
+    return {
+      changes: (w.changes as FlexiChange[] | undefined) ?? [],
+      globalVersion: toNum(w['@globalVersion']),
+      next: toNum(w.next),
+    };
   }
 
   /** One record by any identifier; undefined when it doesn't exist. */
@@ -130,6 +172,7 @@ export class FlexiClient {
       headers: {
         Accept: 'application/json',
         Authorization: this.auth,
+        'User-Agent': this.userAgent,
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),

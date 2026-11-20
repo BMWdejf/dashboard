@@ -2,9 +2,10 @@
 
 import { redirect } from 'next/navigation';
 
-import { getUserTheme } from '@repo/core-db';
+import { getUserPreferences } from '@repo/core-db';
 
 import { getAuth } from '../../lib/auth/server';
+import { writeLocaleCookie } from '../../lib/locale';
 import { writeThemeCookie } from '../../lib/theme';
 
 export type AuthFormState = { error?: string } | undefined;
@@ -51,9 +52,11 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
   const userId = data?.user?.id;
   if (userId) {
     try {
-      await writeThemeCookie(await getUserTheme(userId));
+      const prefs = await getUserPreferences(userId);
+      await writeThemeCookie(prefs.theme);
+      await writeLocaleCookie(prefs.language);
     } catch (e) {
-      console.warn('sign-in: loading theme failed', e instanceof Error ? e.message : e);
+      console.warn('sign-in: loading preferences failed', e instanceof Error ? e.message : e);
     }
   }
   redirect('/');

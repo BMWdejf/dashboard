@@ -14,7 +14,11 @@ decisions.
 > Generated client: `src/generated/prisma` (gitignored; `build` and
 > `check-types` run `prisma generate`). Migrations:
 > `20261115230000_examples_data`, `20261115233000_user_preferences` (theme per
-> Neon Auth user id). Config: `prisma.config.ts` reads
+> Neon Auth user id), `20261119120000_user_preferences_language_price`
+> (language, price mode, product settings JSON), `20261119120100_flexi_cenik_mirror`
+> (read-only mirror of ABRA Flexi `cenik` and related evidences, tables
+> `flexi_*`, plus `flexi_cenik_stav_historie`, `flexi_sync_run`,
+> `flexi_sync_state`). Config: `prisma.config.ts` reads
 > `DATABASE_URL_UNPOOLED` from the root `.env.local` for migrations.
 > Keep pure mapping in `src/dashboard.ts` (tested) apart from queries, because
 > Jest can't load the generated client.
@@ -71,11 +75,29 @@ state. Use one to try a migration on production-shaped data, never `main` itself
 The approver escalates every migration. Destructive ones need a written
 rollback or backfill plan in the PR.
 
+## Flexi mirror (`flexi_*`)
+
+- Written only by the sync (`createFlexiMirrorStore` in `src/flexi-mirror.ts`,
+  SQL in `src/flexi-mirror-sql.ts`); the app only reads. Flexi is the source of truth.
+- Keys: our UUID `id`, Flexi `flexi_id` (unique, upsert key). `kod` is unique
+  only on `flexi_cenik`; Flexi code lists may repeat a code (demo: two warehouses `NOVÉ0`).
+- A product deleted in Flexi gets `deleted_at` and its `kod` gets `~deleted~<flexi_id>`
+  (Flexi may reuse the code); other rows are deleted.
+- Stock: `flexi_cenik.sum_stav_mj` is recomputed from the current period's
+  `flexi_skladova_karta` after every run (Flexi's `lastUpdate` on `cenik` does not
+  change when stock moves). A row in `flexi_cenik_stav_historie` is appended when
+  a product's total changes; KPI trends (Settings → Products) read it.
+  It starts with a one-off backfill from Flexi stock movements
+  (`BACKFILL_HISTORY_SQL`), so trends and sparklines have a year of data at once.
+- Prices `numeric(20,6)`, quantities `numeric(18,6)`: the demo has prices of
+  1.4·10¹¹ with 6 decimals.
+- Queries for the Products page: `src/products.ts` (pure parts in `product-logic.ts`).
+
 ## Tables planned for the integrations
 
 - `WebhookEvent`: `(source, eventInstance, event)` unique, for idempotency.
 - `IdMapping`: `(entity, shoptetId)` unique → Flexi `ext:` id.
-- `SyncRun`: start, end, status, counts, error summary.
+- `SyncRun`: done for Flexi as `FlexiSyncRun` (`flexi_sync_run`).
 - `ScrapeJob` and `ScrapedItem`: extractor id, URL, data `Json`, `scrapedAt`.
 - `AccessGrant`: e-mail → role, for invite-only login (see `auth`).
 

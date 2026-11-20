@@ -4,19 +4,58 @@
     {
       "name": "web",
       "runtimeExecutable": "/opt/homebrew/bin/pnpm",
-      "runtimeArgs": ["--filter", "web", "exec", "next", "dev", "--port", "3001"],
+      "runtimeArgs": [
+        "--filter",
+        "web",
+        "exec",
+        "next",
+        "dev",
+        "--port",
+        "3001"
+      ],
       "port": 3001
     },
     {
       "name": "web-clean-env",
       "runtimeExecutable": "/usr/bin/env",
       "runtimeArgs": [
-        "-u", "DATABASE_URL",
-        "-u", "NEON_AUTH_BASE_URL",
-        "-u", "NEON_AUTH_COOKIE_SECRET",
-        "/opt/homebrew/bin/pnpm", "--filter", "web", "exec", "next", "start", "--port", "3002"
+        "-u",
+        "DATABASE_URL",
+        "-u",
+        "NEON_AUTH_BASE_URL",
+        "-u",
+        "NEON_AUTH_COOKIE_SECRET",
+        "/opt/homebrew/bin/pnpm",
+        "--filter",
+        "web",
+        "exec",
+        "next",
+        "start",
+        "--port",
+        "3002"
       ],
       "port": 3002
+    },
+    {
+      "name": "web-dev-clean-env",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "-u",
+        "DATABASE_URL",
+        "-u",
+        "NEON_AUTH_BASE_URL",
+        "-u",
+        "NEON_AUTH_COOKIE_SECRET",
+        "/opt/homebrew/bin/pnpm",
+        "--filter",
+        "web",
+        "exec",
+        "next",
+        "dev",
+        "--port",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }

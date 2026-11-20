@@ -9,7 +9,24 @@ import styles from './dashboard.module.css';
  * Menu button on tablets and phones, where it slides in as a drawer. The
  * drawer closes on the backdrop, Escape, or choosing a link.
  */
-export function SidebarFrame({ children }: { children: React.ReactNode }) {
+export interface SidebarLabels {
+  menu: string;
+  openMenu: string;
+  closeMenu: string;
+  close: string;
+  sidebar: string;
+}
+
+export function SidebarFrame({
+  children,
+  labels,
+  className,
+}: {
+  children: React.ReactNode;
+  labels: SidebarLabels;
+  /** Extra class for the <aside> (a sidebar variant). */
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -46,11 +63,11 @@ export function SidebarFrame({ children }: { children: React.ReactNode }) {
           className={styles.menuButton}
           aria-expanded={open}
           aria-controls="sidebar"
-          aria-label={open ? 'Zavřít menu' : 'Otevřít menu'}
+          aria-label={open ? labels.closeMenu : labels.openMenu}
           onClick={() => setOpen((o) => !o)}
         >
           <span className={styles.menuIcon} aria-hidden />
-          Menu
+          {labels.menu}
         </button>
       </header>
 
@@ -59,8 +76,8 @@ export function SidebarFrame({ children }: { children: React.ReactNode }) {
       <aside
         id="sidebar"
         ref={asideRef}
-        className={`${styles.sidebar} ${open ? styles.sidebarOpen : ''}`}
-        aria-label="Postranní panel"
+        className={`${styles.sidebar} ${className ?? ''} ${open ? styles.sidebarOpen : ''}`}
+        aria-label={labels.sidebar}
         onClick={(e) => {
           if ((e.target as HTMLElement).closest('a')) setOpen(false);
         }}
@@ -73,7 +90,7 @@ export function SidebarFrame({ children }: { children: React.ReactNode }) {
             buttonRef.current?.focus();
           }}
         >
-          Zavřít
+          {labels.close}
         </button>
         {children}
       </aside>

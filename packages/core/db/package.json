@@ -2,7 +2,7 @@
   "name": "@repo/core-db",
   "version": "0.0.0",
   "private": true,
-  "description": "Neon Postgres access through Prisma: schema, migrations and query functions",
+  "description": "Neon Postgres access through Prisma: schema, migrations, query functions and the Flexi mirror store",
   "license": "UNLICENSED",
   "scripts": {
     "build": "prisma generate && tsc -p tsconfig.build.json",
@@ -25,13 +25,18 @@
     "./theme": {
       "types": "./dist/theme.d.ts",
       "default": "./dist/theme.js"
+    },
+    "./settings": {
+      "types": "./dist/settings.d.ts",
+      "default": "./dist/settings.js"
     }
   },
   "dependencies": {
     "@prisma/adapter-neon": "7.10.1",
     "@prisma/client": "7.10.1",
     "@repo/core-config": "workspace:*",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@repo/core-sync": "workspace:*"
   },
   "devDependencies": {
     "@jest/globals": "30.5.2",

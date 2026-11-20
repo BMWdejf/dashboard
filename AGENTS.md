@@ -2,10 +2,12 @@
 
 A Turborepo monorepo (pnpm workspaces):
 
-- `apps/web`: Next.js App Router frontend. `/` is the dashboard and `/account`
-  the user's account; both need a session (`proxy.ts` redirects to
+- `apps/web`: Next.js App Router frontend. `/` is the dashboard, `/products` the
+  products from the Flexi mirror and `/settings/*` the user's settings; all need a session (`proxy.ts` redirects to
   `/auth/sign-in`). E-mail sign-up/sign-in with Neon Auth under `/auth/*`.
-- `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links`.
+- `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links` and
+  `/sync/flexi` (Flexi → Neon product mirror; needs `SYNC_API_TOKEN`). Manual run:
+  `pnpm --filter api sync:flexi [--full]`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
 - `packages/eslint-config`, `packages/typescript-config`, `packages/jest-config`:
@@ -21,7 +23,8 @@ A Turborepo monorepo (pnpm workspaces):
     `prisma/migrations`, and query functions. `examples_data` holds the
     dashboard's example data (`getDashboardExamples()`); reseed it with
     `pnpm --filter @repo/core-db db:seed-examples`.
-  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions.
+  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions, and the
+    Flexi → Neon mirror sync (`flexi-mirror/`).
   - `scraper` (`@repo/core-scraper`): Playwright runner (host allow-list,
     robots.txt, delays, schema validation) and per-site extractors.
 

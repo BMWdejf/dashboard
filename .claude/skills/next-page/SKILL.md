@@ -58,6 +58,23 @@ Each data view has three states:
 - `card.tsx` and `button.tsx` are template examples. Fix or replace them, don't
   build on their `utm_*` links and `alert()`.
 
+## Language (i18n)
+
+- Texts live in `apps/web/lib/i18n/cs.ts` (source) and `en.ts` (same keys,
+  checked by the `Dictionary` type). Placeholders `{name}` are filled with `fill()`.
+- Server components: `const { locale, t } = await getI18n()` (`lib/locale.ts`,
+  reads the `lang` cookie that mirrors `user_preferences.language`). Pass the
+  needed part of `t` to client components as props.
+- Numbers and dates: `formatters(locale)` in `app/dashboard/format.ts`.
+- A new language: add the code to `LOCALES` in `@repo/core-db/settings` and a dictionary.
+- Not translated yet: the `/auth/*` pages (before sign-in there is no saved language).
+
+## Settings
+
+`/settings/profile` (theme, language, price with/without VAT) and
+`/settings/products` (KPI trends) save on change through `app/settings/actions.ts`.
+`/account` redirects to `/settings/profile`.
+
 ## Accessibility
 
 Use real `<button>` and `<a>` elements, label every form field, give images

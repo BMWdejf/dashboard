@@ -36,10 +36,485 @@ model ExampleData {
 /// Per-user UI settings. `userId` is the Neon Auth user id (neon_auth.user.id);
 /// no foreign key, because Prisma doesn't manage the neon_auth schema.
 model UserPreference {
-  userId    String   @id @map("user_id")
+  userId          String   @id @map("user_id")
   /// dark | light | system
-  theme     String   @default("dark")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  theme           String   @default("dark")
+  /// UI language: cs | en (LOCALES in src/locale.ts)
+  language        String   @default("cs")
+  /// Price shown in product lists: withVat | withoutVat
+  priceMode       String   @default("withVat") @map("price_mode")
+  /// Settings → Products (KPI trends etc.), validated by parseProductSettings.
+  productSettings Json     @default("{}") @map("product_settings")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("user_preferences")
+}
+
+// ===========================================================================
+// Zrcadlo karty produktu z ABRA Flexi (evidence `cenik`) a navázaných evidencí
+// ===========================================================================
+//
+// - Flexi je zdroj pravdy. Tabulky `flexi_*` plní jen synchronizace, ručně se do
+//   nich nezapisuje.
+// - Každá tabulka má `flexiId` (Flexi `id`), `lastUpdate` (Flexi `lastUpdate`) a
+//   `syncedAt`. Primární klíč je vlastní UUID, výchozí hodnota
+//   `gen_random_uuid()` je v databázi.
+// - Pole Flexi končící na `K` (např. `typZasobyK`) vrací `typZasoby.zbozi`.
+//   Ukládá se jen část za tečkou (`zbozi`), prefix doplní zápis zpět do Flexi.
+// - Názvy polí (`///` flexi: …) jsou ověřené v /c/demo/<evidence>/properties.json
+//   (11/2026). Dotazy jsou v Postman kolekci „Dashboard Flexibee API“.
+// - Reference Flexi vrací jako `code:X`; interní id je v `<pole>@ref`
+//   (/c/<firma>/<evidence>/<id>.json). Prázdná hodnota je prázdný řetězec.
+// - `raw` (Json) drží celý záznam z Flexi. Co nemá vlastní sloupec, zůstává tam a
+//   doplní se migrací bez nového stahování.
+// - `kod` je unikátní jen u ceníku. Číselníky (sklady, typy atributů…) mohou mít
+//   ve Flexi stejný kód u více záznamů (v demu dva sklady `NOVÉ0`), proto jen index.
+// - Enumy jsou `String`, povolené hodnoty jsou v `src/flexi.ts`.
+// - Peníze a množství jsou `Decimal`, nikdy `Float`. Ceny numeric(20,6), množství
+//   numeric(18,6): v demu jsou ceny až 1,4·10¹¹ se 6 desetinnými místy.
+
+/// flexi: evidence `skupina-zbozi`
+model FlexiSkupinaZbozi {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod
+  kod        String
+  /// flexi: nazev
+  nazev      String?
+
+  cenik FlexiCenik[]
+
+  @@index([kod], map: "flexi_skupina_zbozi_kod_idx")
+  @@map("flexi_skupina_zbozi")
+}
+
+/// flexi: evidence `merna-jednotka`
+model FlexiMernaJednotka {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod (např. KS)
+  kod        String
+  /// flexi: nazev
+  nazev      String?
+
+  cenikMj1           FlexiCenik[] @relation("CenikMj1")
+  cenikMjHmotnosti   FlexiCenik[] @relation("CenikMjHmotnosti")
+  cenikMjDodaciLhuty FlexiCenik[] @relation("CenikMjDodaciLhuty")
+
+  @@index([kod], map: "flexi_merna_jednotka_kod_idx")
+  @@map("flexi_merna_jednotka")
+}
+
+/// flexi: evidence `sklad`
+model FlexiSklad {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod (může mít diakritiku, např. PLZEŇ)
+  kod        String
+  /// flexi: nazev
+  nazev      String?
+
+  skladoveKarty FlexiSkladovaKarta[]
+
+  @@index([kod], map: "flexi_sklad_kod_idx")
+  @@map("flexi_sklad")
+}
+
+/// flexi: evidence `ucetni-obdobi`. Skladové karty ve Flexi existují po obdobích;
+/// synchronizují se jen karty aktuálního období.
+model FlexiUcetniObdobi {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod (např. 2026)
+  kod        String
+  /// flexi: popis
+  popis      String?
+  /// flexi: platiOdData
+  platiOd    DateTime  @map("plati_od") @db.Date
+  /// flexi: platiDoData
+  platiDo    DateTime  @map("plati_do") @db.Date
+
+  skladoveKarty FlexiSkladovaKarta[]
+
+  @@index([kod], map: "flexi_ucetni_obdobi_kod_idx")
+  @@map("flexi_ucetni_obdobi")
+}
+
+/// flexi: evidence `adresar`. Minimální zrcadlo, aby šly navázat individuální ceny
+/// na firmu. S firmami v aplikaci se propojí podle IČO.
+model FlexiAdresar {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod
+  kod        String
+  /// flexi: nazev
+  nazev      String?
+  /// flexi: ic
+  ic         String?
+  /// flexi: dic
+  dic        String?
+
+  ceny        FlexiCenikOdberatel[]
+  nakupniCeny FlexiCenikDodavatel[]
+
+  @@index([ic], map: "flexi_adresar_ic_idx")
+  @@index([kod], map: "flexi_adresar_kod_idx")
+  @@map("flexi_adresar")
+}
+
+/// Karta produktu. flexi: evidence `cenik`.
+model FlexiCenik {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId        Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate     DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt       DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: createdDate (u starších položek prázdné)
+  flexiCreatedAt DateTime? @map("flexi_created_at") @db.Timestamptz(6)
+  /// Položka ve Flexi smazaná (Changes API, @operation = delete). Zrcadlo ji drží
+  /// kvůli historii, seznamy ji skrývají.
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // Identita a texty
+  /// flexi: kod (jednoznačný identifikátor položky)
+  kod         String
+  /// flexi: nazev
+  nazev       String  @db.VarChar(255)
+  /// flexi: popis
+  popis       String?
+  /// flexi: kratkyPopis
+  kratkyPopis String? @map("kratky_popis")
+  /// flexi: klicSlova
+  klicSlova   String? @map("klic_slova")
+  /// flexi: techParam
+  techParam   String? @map("tech_param")
+  /// flexi: eanKod
+  eanKod      String? @map("ean_kod")
+
+  // Zařazení
+  /// flexi: typZasobyK. Hodnoty: TYP_ZASOBY v src/flexi.ts.
+  typZasoby      String   @map("typ_zasoby")
+  /// flexi: skladove
+  skladove       Boolean  @default(false)
+  /// flexi: exportNaEshop
+  exportNaEshop  Boolean  @default(false) @map("export_na_eshop")
+  /// flexi: skupZboz
+  skupinaZboziId String?  @map("skupina_zbozi_id") @db.Uuid
+  /// flexi: mj1
+  mj1Id          String?  @map("mj1_id") @db.Uuid
+  /// flexi: stitky (ve Flexi řetězec "A, B, C")
+  stitky         String[] @default([])
+  /// flexi: platiOd (rok, 0 = bez omezení)
+  platiOdRok     Int?     @map("plati_od_rok")
+  /// flexi: platiDo (rok, 9999 = bez omezení)
+  platiDoRok     Int?     @map("plati_do_rok")
+
+  // Ceny
+  /// flexi: typCenyDphK (ze které ceny se dopočítá zbytek). Hodnoty: TYP_CENY_DPH.
+  typCenyDph     String?  @map("typ_ceny_dph")
+  /// flexi: typSzbDphK. Hodnoty: TYP_SAZBY_DPH.
+  typSazbyDph    String?  @map("typ_sazby_dph")
+  /// flexi: szbDph
+  szbDph         Decimal? @map("szb_dph") @db.Decimal(5, 2)
+  /// flexi: cenaZakl
+  cenaZakl       Decimal? @map("cena_zakl") @db.Decimal(20, 6)
+  /// flexi: cenaZaklBezDph
+  cenaZaklBezDph Decimal? @map("cena_zakl_bez_dph") @db.Decimal(20, 6)
+  /// flexi: cenaZaklVcDph
+  cenaZaklVcDph  Decimal? @map("cena_zakl_vc_dph") @db.Decimal(20, 6)
+  /// flexi: cenaBezna
+  cenaBezna      Decimal? @map("cena_bezna") @db.Decimal(20, 6)
+  /// flexi: nakupCena
+  nakupCena      Decimal? @map("nakup_cena") @db.Decimal(20, 6)
+
+  // Sklad (součty přes sklady spočítá Flexi)
+  /// flexi: sumStavMj
+  sumStavMj   Decimal @default(0) @map("sum_stav_mj") @db.Decimal(18, 6)
+  /// flexi: sumDostupMj
+  sumDostupMj Decimal @default(0) @map("sum_dostup_mj") @db.Decimal(18, 6)
+  /// flexi: sumRezerMj
+  sumRezerMj  Decimal @default(0) @map("sum_rezer_mj") @db.Decimal(18, 6)
+
+  // Záruka, dodání, hmotnost, šarže
+  /// flexi: zaruka
+  zaruka          Int?
+  /// flexi: mjZarukyK. Hodnoty: MJ_ZARUKY.
+  mjZaruky        String?  @map("mj_zaruky")
+  /// flexi: dodaciLhuta
+  dodaciLhuta     Decimal? @map("dodaci_lhuta") @db.Decimal(10, 2)
+  /// flexi: mjDodaciLhuta (měrná jednotka, např. den)
+  mjDodaciLhutyId String?  @map("mj_dodaci_lhuty_id") @db.Uuid
+  /// flexi: hmotMj
+  hmotnostNetto   Decimal? @map("hmotnost_netto") @db.Decimal(18, 6)
+  /// flexi: mjHmot
+  mjHmotnostiId   String?  @map("mj_hmotnosti_id") @db.Uuid
+  /// flexi: evidSarze
+  evidSarze       Boolean  @default(false) @map("evid_sarze")
+  /// flexi: evidExpir
+  evidExpirace    Boolean  @default(false) @map("evid_expirace")
+
+  raw Json?
+
+  skupinaZbozi  FlexiSkupinaZbozi?       @relation(fields: [skupinaZboziId], references: [id], onDelete: SetNull)
+  mj1           FlexiMernaJednotka?      @relation("CenikMj1", fields: [mj1Id], references: [id], onDelete: SetNull)
+  mjHmotnosti   FlexiMernaJednotka?      @relation("CenikMjHmotnosti", fields: [mjHmotnostiId], references: [id], onDelete: SetNull)
+  mjDodaciLhuty FlexiMernaJednotka?      @relation("CenikMjDodaciLhuty", fields: [mjDodaciLhutyId], references: [id], onDelete: SetNull)
+  skladoveKarty FlexiSkladovaKarta[]
+  atributy      FlexiCenikAtribut[]
+  odberatele    FlexiCenikOdberatel[]
+  dodavatele    FlexiCenikDodavatel[]
+  prilohy       FlexiCenikPriloha[]
+  stavHistorie  FlexiCenikStavHistorie[]
+
+  // Ve Flexi je kod jednoznačný. Pokud firma používá "režim individuálních kódů
+  // ceníkových položek", tento unikátní index odstraň.
+  @@unique([kod], map: "flexi_cenik_kod_uq")
+  @@index([eanKod], map: "flexi_cenik_ean_idx")
+  @@index([skupinaZboziId], map: "flexi_cenik_skupina_idx")
+  @@index([nazev], map: "flexi_cenik_nazev_idx")
+  @@map("flexi_cenik")
+}
+
+/// Historie celkového stavu skladu produktu (sumStavMj). Synchronizace zapíše
+/// řádek, jen když se stav změní. Stav k datu D = poslední řádek s platiOd ≤ D.
+/// Z toho se počítají trendy KPI (Nastavení → Produkty).
+model FlexiCenikStavHistorie {
+  cenikId String   @map("cenik_id") @db.Uuid
+  platiOd DateTime @map("plati_od") @db.Timestamptz(6)
+  stavMj  Decimal  @map("stav_mj") @db.Decimal(18, 6)
+
+  cenik FlexiCenik @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+
+  @@id([cenikId, platiOd])
+  @@index([platiOd], map: "flexi_cenik_stav_historie_plati_od_idx")
+  @@map("flexi_cenik_stav_historie")
+}
+
+/// flexi: evidence `skladova-karta`. Jedna karta na produkt × sklad × účetní
+/// období. Jen pro čtení, stav ve Flexi mění pouze skladové pohyby.
+model FlexiSkladovaKarta {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId        Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate     DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt       DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: cenik
+  cenikId        String    @map("cenik_id") @db.Uuid
+  /// flexi: sklad
+  skladId        String    @map("sklad_id") @db.Uuid
+  /// flexi: ucetObdobi
+  ucetniObdobiId String    @map("ucetni_obdobi_id") @db.Uuid
+  /// flexi: stavMJ
+  stavMj         Decimal   @default(0) @map("stav_mj") @db.Decimal(18, 6)
+  /// flexi: minMJ (minimální zásoba, 0 = nehlídá se)
+  minMj          Decimal   @default(0) @map("min_mj") @db.Decimal(18, 6)
+  /// flexi: maxMJ
+  maxMj          Decimal   @default(0) @map("max_mj") @db.Decimal(18, 6)
+  /// flexi: rezervMJ
+  rezervMj       Decimal   @default(0) @map("rezerv_mj") @db.Decimal(18, 6)
+  /// flexi: dostupMj
+  dostupMj       Decimal   @default(0) @map("dostup_mj") @db.Decimal(18, 6)
+
+  cenik        FlexiCenik        @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+  sklad        FlexiSklad        @relation(fields: [skladId], references: [id], onDelete: Cascade)
+  ucetniObdobi FlexiUcetniObdobi @relation(fields: [ucetniObdobiId], references: [id], onDelete: Cascade)
+
+  @@unique([cenikId, skladId, ucetniObdobiId], map: "flexi_skladova_karta_uq")
+  @@index([skladId, ucetniObdobiId], map: "flexi_skladova_karta_sklad_idx")
+  @@map("flexi_skladova_karta")
+}
+
+/// flexi: evidence `typ-atributu` (vlastní pole produktu: barva, velikost, gramáž…)
+model FlexiTypAtributu {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: kod (např. VELIKOST)
+  kod        String
+  /// flexi: nazev
+  nazev      String?
+  /// flexi: typAtributK. Hodnoty: TYP_ATRIBUTU v src/flexi.ts.
+  typ        String?
+
+  atributy FlexiCenikAtribut[]
+
+  @@index([kod], map: "flexi_typ_atributu_kod_idx")
+  @@map("flexi_typ_atributu")
+}
+
+/// flexi: evidence `atribut` (jen záznamy navázané na ceník).
+model FlexiCenikAtribut {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId       Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate    DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt      DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: cenik
+  cenikId       String    @map("cenik_id") @db.Uuid
+  /// flexi: typAtributu
+  typAtributuId String    @map("typ_atributu_id") @db.Uuid
+  /// flexi: hodnota (vždy jako text)
+  hodnota       String?
+  /// flexi: valNumeric / valInteger (číselné atributy, jde podle nich třídit)
+  valNumeric    Decimal?  @map("val_numeric") @db.Decimal(24, 6)
+  raw           Json?
+
+  cenik       FlexiCenik       @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+  typAtributu FlexiTypAtributu @relation(fields: [typAtributuId], references: [id], onDelete: Cascade)
+
+  @@index([cenikId, typAtributuId], map: "flexi_cenik_atribut_cenik_idx")
+  // Ve Flexi nejde filtrovat ceník podle hodnoty atributu. V kopii ano.
+  @@index([typAtributuId, hodnota], map: "flexi_cenik_atribut_typ_hodnota_idx")
+  @@map("flexi_cenik_atribut")
+}
+
+/// flexi: evidence `odberatel` (individuální prodejní ceny). Výslednou cenu po celé
+/// cenotvorbě Flexi tahá evidence `individualni-cenik`; je náročná, cachuj ji.
+model FlexiCenikOdberatel {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: cenik
+  cenikId    String    @map("cenik_id") @db.Uuid
+  /// flexi: firma (null = cena pro ceníkovou skupinu, viz raw.skupCen)
+  firmaId    String?   @map("firma_id") @db.Uuid
+  /// flexi: mena (kód měny, např. CZK)
+  mena       String?   @db.VarChar(10)
+  /// flexi: prodejCena
+  prodejCena Decimal?  @map("prodej_cena") @db.Decimal(20, 6)
+  /// flexi: platiOdData
+  platiOd    DateTime? @map("plati_od") @db.Date
+  /// flexi: platiDoData
+  platiDo    DateTime? @map("plati_do") @db.Date
+  raw        Json?
+
+  cenik FlexiCenik    @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+  firma FlexiAdresar? @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  @@index([firmaId, cenikId], map: "flexi_cenik_odberatel_firma_cenik_idx")
+  @@map("flexi_cenik_odberatel")
+}
+
+/// flexi: evidence `dodavatel` (nákupní ceny od dodavatelů).
+model FlexiCenikDodavatel {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId    Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt   DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: cenik
+  cenikId    String    @map("cenik_id") @db.Uuid
+  /// flexi: firma
+  firmaId    String?   @map("firma_id") @db.Uuid
+  /// flexi: mena
+  mena       String?   @db.VarChar(10)
+  /// flexi: nakupCena
+  nakupCena  Decimal?  @map("nakup_cena") @db.Decimal(20, 6)
+  /// flexi: primarni
+  primarni   Boolean   @default(false)
+  raw        Json?
+
+  cenik FlexiCenik    @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+  firma FlexiAdresar? @relation(fields: [firmaId], references: [id], onDelete: Cascade)
+
+  @@index([firmaId, cenikId], map: "flexi_cenik_dodavatel_firma_cenik_idx")
+  @@map("flexi_cenik_dodavatel")
+}
+
+/// flexi: evidence `priloha` (jen přílohy ceníku). Soubor se do DB neukládá.
+model FlexiCenikPriloha {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// flexi: id
+  flexiId      Int       @unique @map("flexi_id")
+  /// flexi: lastUpdate
+  lastUpdate   DateTime? @map("last_update") @db.Timestamptz(6)
+  syncedAt     DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  /// flexi: cenik
+  cenikId      String    @map("cenik_id") @db.Uuid
+  /// flexi: nazSoub
+  nazevSouboru String?   @map("nazev_souboru")
+  /// flexi: contentType
+  contentType  String?   @map("content_type")
+  /// flexi: typK. Hodnoty: TYP_PRILOHY.
+  typ          String?
+  /// flexi: dataSize
+  dataSize     Int?      @map("data_size")
+  /// flexi: dataHash (MD5)
+  dataHash     String?   @map("data_hash")
+  /// flexi: mainAttachment
+  hlavni       Boolean   @default(false)
+  /// flexi: link (příloha typu odkaz)
+  odkaz        String?
+  /// Kam je soubor uložený u nás (Blob / R2). null = ještě nestaženo.
+  url          String?
+
+  cenik FlexiCenik @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+
+  @@index([cenikId], map: "flexi_cenik_priloha_cenik_idx")
+  @@map("flexi_cenik_priloha")
+}
+
+// ---------------------------------------------------------------------------
+// Stav synchronizace
+// ---------------------------------------------------------------------------
+
+/// Jeden běh synchronizace Flexi → Neon (skript, endpoint nebo cron).
+model FlexiSyncRun {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// script | api | cron
+  trigger    String
+  /// running | success | failed
+  status     String    @default("running")
+  startedAt  DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+  /// Počty po evidencích: { cenik: { fetched, upserted, deleted }, … }
+  counts     Json      @default("{}")
+  /// Shrnutí chyby (bez hesel a URL s přihlášením).
+  error      String?
+
+  @@index([startedAt], map: "flexi_sync_run_started_idx")
+  @@map("flexi_sync_run")
+}
+
+/// Kurzor inkrementální synchronizace pro každou evidenci.
+model FlexiSyncState {
+  /// Název evidence Flexi (cenik, skladova-karta, …)
+  evidence       String    @id
+  /// Největší `lastUpdate`, který už je v zrcadle.
+  lastUpdate     DateTime? @map("last_update") @db.Timestamptz(6)
+  /// Changes API: verze, od které číst příště (`next`).
+  changesVersion BigInt?   @map("changes_version")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("flexi_sync_state")
 }

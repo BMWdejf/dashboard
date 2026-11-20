@@ -36,6 +36,21 @@ This skill holds **this project's** rules.
   exports carry only texts (`textContent`), not styles: layout follows
   DESIGN.md, numbers come from `examples_data`. The world map of "Users by
   country" is not built (bars only).
+- **Products** (`/products`, `Products.json`, 1280×1028): built 1:1 and measured
+  in the browser at 1280×1028 (sidebar 300, header 980×94, title 28px/-0.7,
+  search 448×38, KPI 217×134 with tones #cb3cff/#05c168/#38bdf8/#ff5a65, table
+  card 916 at y 252, quick search in the sidebar at y 833, bottom block 133).
+  Its sidebar (accordion for the current section, search under the menu,
+  profile + CTA) replaced `Sidebar Wrapper.json` on every page:
+  `DashboardShell` + `SectionNav` (`section-sidebar.module.css`). Sections with
+  sub-items: Produkty, Nastavení. `/products` uses `flush` (own 32px padding).
+  KPI cards carry a sparkline (`Sparkline.tsx`, data `getProductSparklines`)
+  in the 183×50 top row; rows end with a "⋯" menu (`RowActions.tsx`: detail,
+  copy code/EAN; edit, duplicate and delete are shown disabled until writing
+  to Flexi is decided). Search updates while typing (`ProductSearch.tsx`, 300 ms).
+  `/products/[id]` is the detail (no frame in the design; built from the same cards).
+  The export has no styles below the card level: table cells, pills and badges
+  use the theme tokens.
 - **Source of truth**: the pages `Screens` (finished screens) and
   `Components` (the library). Frames in other pages are drafts. Don't build
   from them unless the task links one explicitly.

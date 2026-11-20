@@ -4,3 +4,8 @@ export * from './examples';
 export * from './preferences';
 export * from './theme';
 export * from './health';
+export * from './flexi';
+export * from './settings';
+export * from './products';
+export * from './flexi-mirror';
+export * from './flexi-mirror-sql';
