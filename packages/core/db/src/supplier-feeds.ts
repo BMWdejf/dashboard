@@ -2,7 +2,12 @@ import type { FeedMapping, SupplierFeedImportStats, SupplierFeedInput, SupplierF
 
 import { getDb } from './client';
 import { Prisma } from './generated/prisma/client';
-import { MARK_REMOVED_SUPPLIER_ITEMS_SQL, supplierItemChunks, UPSERT_SUPPLIER_ITEMS_SQL } from './supplier-feed-sql';
+import {
+  CLAIM_SUPPLIER_FEED_SQL,
+  MARK_REMOVED_SUPPLIER_ITEMS_SQL,
+  supplierItemChunks,
+  UPSERT_SUPPLIER_ITEMS_SQL,
+} from './supplier-feed-sql';
 
 /**
  * Supplier XML feeds (`supplier_feed`) and their items (`supplier_feed_item`).
@@ -76,10 +81,7 @@ export async function claimSupplierFeedImport(id: string, at = new Date(), stale
   const rows = await getDb().$queryRawUnsafe<
     { id: string; url: string; item_element: string; mapping: FeedMapping; import_interval_minutes: number | null }[]
   >(
-    `UPDATE supplier_feed SET last_import_status = 'running', last_import_at = $2, last_import_error = NULL, updated_at = $2
-     WHERE id = $1::uuid
-       AND (last_import_status IS DISTINCT FROM 'running' OR last_import_at < $2 - make_interval(mins => $3))
-     RETURNING id, url, item_element, mapping, import_interval_minutes`,
+    CLAIM_SUPPLIER_FEED_SQL,
     id,
     at,
     staleMinutes,

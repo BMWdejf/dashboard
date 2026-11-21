@@ -38,7 +38,7 @@ export const UPSERT_SUPPLIER_ITEMS_SQL = [
   `INSERT INTO supplier_feed_item (feed_id, ${COLUMNS.join(', ')}, first_seen_at, last_seen_at, removed_at)`,
   `SELECT $2::uuid, ${COLUMNS.map((c) =>
     c === 'obrazky' ? `ARRAY(SELECT jsonb_array_elements_text(COALESCE(r.obrazky, '[]'::jsonb)))` : `r.${c}`,
-  ).join(', ')}, $3, $3, NULL`,
+  ).join(', ')}, $3::timestamptz, $3::timestamptz, NULL`,
   `FROM jsonb_to_recordset($1::jsonb) AS r(${INPUT.join(', ')})`,
   `ON CONFLICT (feed_id, kod) DO UPDATE SET ${[...COLUMNS.filter((c) => c !== 'kod'), 'last_seen_at']
     .map((c) => `${c} = EXCLUDED.${c}`)
@@ -46,8 +46,20 @@ export const UPSERT_SUPPLIER_ITEMS_SQL = [
 ].join('\n');
 
 /** Marks the feed's items not seen in this import ($2) as removed. */
-export const MARK_REMOVED_SUPPLIER_ITEMS_SQL = `UPDATE supplier_feed_item SET removed_at = $2
-WHERE feed_id = $1::uuid AND last_seen_at < $2 AND removed_at IS NULL`;
+export const MARK_REMOVED_SUPPLIER_ITEMS_SQL = `UPDATE supplier_feed_item SET removed_at = $2::timestamptz
+WHERE feed_id = $1::uuid AND last_seen_at < $2::timestamptz AND removed_at IS NULL`;
+
+/**
+ * Claims a feed for an import: $1 feed id, $2 now, $3 minutes after which a
+ * "running" import counts as stale. The casts are needed: without them
+ * Postgres reads `$2 - make_interval(...)` as interval minus interval and the
+ * comparison with `last_import_at` fails.
+ */
+export const CLAIM_SUPPLIER_FEED_SQL = `UPDATE supplier_feed
+SET last_import_status = 'running', last_import_at = $2::timestamptz, last_import_error = NULL, updated_at = $2::timestamptz
+WHERE id = $1::uuid
+  AND (last_import_status IS DISTINCT FROM 'running' OR last_import_at < $2::timestamptz - make_interval(mins => $3::int))
+RETURNING id, url, item_element, mapping, import_interval_minutes`;
 
 const NUL = /\u0000/g; // eslint-disable-line no-control-regex
 
