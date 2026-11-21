@@ -1,5 +1,11 @@
 import { flexiEnv, shoptetEnv } from '@repo/core-config';
-import { getIntegrationsOverview, type IntegrationsOverview, type Locale } from '@repo/core-db';
+import {
+  getIntegrationsOverview,
+  listSupplierFeeds,
+  type IntegrationsOverview,
+  type Locale,
+  type SupplierFeedSummary,
+} from '@repo/core-db';
 import Link from 'next/link';
 
 import dash from '../dashboard/dashboard.module.css';
@@ -47,7 +53,77 @@ function shoptetEndpoint(): string | null {
   return env.success ? new URL(env.data.SHOPTET_API_URL).host : null;
 }
 
-function buildRows(o: IntegrationsOverview, t: T, locale: Locale, now: number): Row[] {
+/** "luzkovinysmolka.cz/heureka/export/products.xml" */
+function feedEndpoint(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host.replace(/^www\./, '')}${u.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
+/** A stored import failure ({ code, params }) in the user's language. */
+function feedFailure(error: string | null, t: T, codes: Record<string, string>): string | undefined {
+  if (!error) return undefined;
+  let f: { code?: string; params?: Record<string, string | number> } = {};
+  try {
+    f = JSON.parse(error) as typeof f;
+  } catch {
+    // Older or unexpected text: show the generic message.
+  }
+  const message = fill(codes[f.code ?? ''] ?? codes.internal ?? '', { reason: '', ...(f.params ?? {}) });
+  return fill(t.feedFailed, { message });
+}
+
+function feedRows(feeds: SupplierFeedSummary[], t: T, codes: Record<string, string>, locale: Locale, now: number, time: Intl.DateTimeFormat): Row[] {
+  if (feeds.length === 0) {
+    return [
+      {
+        key: 'feed',
+        kind: 'feed',
+        name: t.items.feed,
+        endpoint: null,
+        direction: 'pull',
+        cadence: t.cadence.none,
+        payload: null,
+        heartbeat: null,
+        status: 'notConnected',
+        note: t.notes.feed,
+      },
+    ];
+  }
+  return feeds.map((f) => ({
+    key: `feed-${f.id}`,
+    kind: 'feed' as const,
+    name: f.name,
+    endpoint: feedEndpoint(f.url),
+    direction: 'pull' as const,
+    cadence: f.importIntervalMinutes
+      ? ((t.cadence as Record<string, string>)[String(f.importIntervalMinutes)] ?? t.cadence.cron)
+      : t.cadence.manual,
+    payload: { value: f.items, unit: t.payload.items },
+    heartbeat: f.lastImportAt ? { ago: relative(f.lastImportAt, now, locale), time: time.format(f.lastImportAt) } : null,
+    status:
+      f.lastImportStatus === 'success'
+        ? ('connected' as const)
+        : f.lastImportStatus === 'running'
+          ? ('running' as const)
+          : f.lastImportStatus === 'failed'
+            ? ('failed' as const)
+            : ('never' as const),
+    note: f.lastImportStatus === 'failed' ? feedFailure(f.lastImportError, t, codes) : undefined,
+  }));
+}
+
+function buildRows(
+  o: IntegrationsOverview,
+  feeds: SupplierFeedSummary[],
+  t: T,
+  codes: Record<string, string>,
+  locale: Locale,
+  now: number,
+): Row[] {
   const time = new Intl.DateTimeFormat(intlLocale(locale), {
     hour: '2-digit',
     minute: '2-digit',
@@ -88,18 +164,7 @@ function buildRows(o: IntegrationsOverview, t: T, locale: Locale, now: number): 
       status: 'notConnected',
       note: t.notes.shoptet,
     },
-    {
-      key: 'feed',
-      kind: 'feed',
-      name: t.items.feed,
-      endpoint: null,
-      direction: 'pull',
-      cadence: t.cadence.none,
-      payload: null,
-      heartbeat: null,
-      status: 'notConnected',
-      note: t.notes.feed,
-    },
+    ...feedRows(feeds, t, codes, locale, now, time),
   ];
 }
 
@@ -110,13 +175,19 @@ function duration(ms: number | null, t: T, f: Formatters): string {
 }
 
 /** Database read and the time maths, outside render. */
-async function load(t: T, locale: Locale) {
-  const overview = await getIntegrationsOverview().catch((e) => {
-    console.error('integrations: overview failed', e instanceof Error ? e.message : e);
-    return null;
-  });
+async function load(t: T, codes: Record<string, string>, locale: Locale) {
+  const [overview, feeds] = await Promise.all([
+    getIntegrationsOverview().catch((e) => {
+      console.error('integrations: overview failed', e instanceof Error ? e.message : e);
+      return null;
+    }),
+    listSupplierFeeds().catch((e) => {
+      console.error('integrations: feeds failed', e instanceof Error ? e.message : e);
+      return [];
+    }),
+  ]);
   const now = Date.now();
-  return { overview, now, rows: overview ? buildRows(overview, t, locale, now) : [] };
+  return { overview, now, rows: overview ? buildRows(overview, feeds, t, codes, locale, now) : [] };
 }
 
 type Params = Promise<Record<string, string | string[] | undefined>>;
@@ -129,7 +200,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const typeParam = Array.isArray(sp.type) ? sp.type[0] : sp.type;
   const filter = KINDS.find((k) => k === typeParam) ?? null;
 
-  const { overview, rows, now } = await load(ti, locale);
+  const { overview, rows, now } = await load(ti, t.integrationsNew.codes, locale);
   const shown = filter ? rows.filter((r) => r.kind === filter) : rows;
 
   return (

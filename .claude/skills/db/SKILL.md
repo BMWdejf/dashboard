@@ -18,7 +18,8 @@ decisions.
 > (language, price mode, product settings JSON), `20261119120100_flexi_cenik_mirror`
 > (read-only mirror of ABRA Flexi `cenik` and related evidences, tables
 > `flexi_*`, plus `flexi_cenik_stav_historie`, `flexi_sync_run`,
-> `flexi_sync_state`). Config: `prisma.config.ts` reads
+> `flexi_sync_state`), `20261121090000_shoptet_product_settings`,
+> `20261121180000_supplier_feeds` (`supplier_feed`, `supplier_feed_item`). Config: `prisma.config.ts` reads
 > `DATABASE_URL_UNPOOLED` from the root `.env.local` for migrations.
 > Keep pure mapping in `src/dashboard.ts` (tested) apart from queries, because
 > Jest can't load the generated client.
@@ -92,6 +93,21 @@ rollback or backfill plan in the PR.
 - Prices `numeric(20,6)`, quantities `numeric(18,6)`: the demo has prices of
   1.4·10¹¹ with 6 decimals.
 - Queries for the Products page: `src/products.ts` (pure parts in `product-logic.ts`).
+
+## Supplier XML feeds (`supplier_feed*`)
+
+- `supplier_feed`: one row per feed URL (unique): dialect, item element, the
+  tag → column `mapping` (jsonb, validated by `validateFeedMapping` in
+  `@repo/core-sync`), `import_interval_minutes` (null = by hand),
+  `next_import_at`, and the last import's status, error (`{ code, params }`
+  JSON, safe to show) and stats.
+- `supplier_feed_item`: the feed's products in columns named like `flexi_cenik`,
+  unique `(feed_id, kod)`; tags the mapping leaves out stay in `raw`.
+  `cenik_id` (set null on delete) is for pairing on the Products page; the
+  import never touches it. Items missing from a later import get `removed_at`.
+- Written only by the import (`createSupplierFeedStore` in
+  `src/supplier-feeds.ts`, SQL in `src/supplier-feed-sql.ts`): one transaction,
+  upserts in chunks of 500. Nothing goes to Flexi.
 
 ## Shoptet output settings
 

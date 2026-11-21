@@ -13,3 +13,5 @@ export * from './shoptet-logic';
 export * from './shoptet-settings';
 export * from './integrations';
 export * from './integrations-logic';
+export * from './supplier-feed-sql';
+export * from './supplier-feeds';
