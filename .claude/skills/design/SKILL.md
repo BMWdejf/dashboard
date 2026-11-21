@@ -70,7 +70,8 @@ This skill holds **this project's** rules.
   REST API integration.json` and `Configuration XML feed Data integration.json`
   (Shoptet reuses the REST API layout; it has no frame). "Test" runs real
   read-only checks through the API (`POST /integrations/checks/:kind`, logic in
-  `@repo/core-sync` `checks/`); nothing is saved, so save stays disabled and a
+  `@repo/core-sync` `checks/`, connections pinned to checked addresses with an
+  undici `Agent`; a LAN Flexi needs `FLEXI_CHECK_ALLOW_PRIVATE=true`); nothing is saved, so save stays disabled and a
   good test shows the env lines to set. Dropped from the design as untrue for
   this app: the static gateway IP and its checkbox, AES-256/HSM storage claims
   and the base currency select (no setting uses it).

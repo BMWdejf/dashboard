@@ -9,6 +9,7 @@ async function make(fetchImpl: (url: string | URL, init?: RequestInit) => Promis
   const fetchMock = jest.fn(fetchImpl);
   const deps: IntegrationCheckDeps = {
     fetch: fetchMock as unknown as typeof fetch,
+    flexiFetch: fetchMock as unknown as typeof fetch,
     lookup: async () => ['93.184.216.34'],
     shoptetBaseUrl: 'https://api.myshoptet.com',
   };

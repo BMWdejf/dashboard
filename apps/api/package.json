@@ -27,7 +27,8 @@
     "@repo/core-sync": "workspace:*",
     "escape-html": "1.0.3",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "undici": "8.9.0"
   },
   "devDependencies": {
     "@jest/globals": "30.5.2",

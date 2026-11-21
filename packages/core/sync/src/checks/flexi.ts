@@ -1,4 +1,4 @@
-import { allOk, networkFailure, resolveStep, skipped } from './net';
+import { allOk, isPrivateAddress, networkFailure, resolveStep, skipped } from './net';
 import type { CheckDeps, CheckResult, CheckStep, FlexiCheckInfo, FlexiCheckInput } from './types';
 
 /** "demo.flexibee.eu" + 5434 → "https://demo.flexibee.eu:5434". */
@@ -19,14 +19,16 @@ export function parseCompanies(json: unknown): FlexiCheckInfo['companies'] | nul
 }
 
 /**
- * ABRA Flexi REST API: host resolves (LAN allowed), the TLS port answers, and
- * the user can list companies (GET /c.json). Read-only; the password is only
- * sent to the Flexi server.
+ * ABRA Flexi REST API: host resolves (LAN only with `deps.allowPrivate`), the
+ * TLS port answers, and the user can list companies (GET /c.json). Read-only;
+ * the password is only sent to the Flexi server. With private networks
+ * allowed, a failed connection is always one generic "unreachable", so the
+ * check can't be used to tell closed, filtered and TLS ports apart on the LAN.
  */
 export async function checkFlexi(input: FlexiCheckInput, deps: CheckDeps): Promise<CheckResult<FlexiCheckInfo>> {
   const now = deps.now ?? Date.now;
   const url = flexiBaseUrl(input.host, input.port);
-  const dns = await resolveStep(input.host, deps, true);
+  const dns = await resolveStep(input.host, deps, deps.allowPrivate ?? false);
   if (dns.status === 'failed') {
     return { ok: false, steps: [dns, skipped('connect'), skipped('auth')], latencyMs: null, info: null };
   }
@@ -44,7 +46,15 @@ export async function checkFlexi(input: FlexiCheckInput, deps: CheckDeps): Promi
     });
   } catch (e) {
     const f = networkFailure(e);
-    const connect: CheckStep = { key: 'connect', status: 'failed', code: f.code, params: { port: input.port, reason: f.reason } };
+    // With private networks allowed, the address used at connect time may
+    // differ from the "dns" step (rebinding), so every failure stays generic.
+    const lan = (deps.allowPrivate ?? false) || isPrivateAddress(String(dns.params?.address ?? ''));
+    const connect: CheckStep =
+      f.code === 'blocked'
+        ? { key: 'connect', status: 'failed', code: 'blocked' }
+        : lan
+          ? { key: 'connect', status: 'failed', code: 'unreachable', params: { port: input.port, reason: '—' } }
+          : { key: 'connect', status: 'failed', code: f.code, params: { port: input.port, reason: f.reason } };
     return { ok: false, steps: [dns, connect, skipped('auth')], latencyMs: null, info: null };
   }
   const latencyMs = now() - started;

@@ -543,7 +543,7 @@ export const cs = {
       guideRole: 'Doporučená role',
       guideRoleText: 'Synchronizace jen čte. Úpravy produktů zapisují, a to jen když je v API vypnutý dry-run (FLEXI_DRY_RUN=false).',
       guideFirewall: 'Firewall',
-      guideFirewallText: 'Požadavky přicházejí ze serveru, kde běží apps/api. Pokud server Flexi omezuje příchozí spojení, povolte jeho IP adresu.',
+      guideFirewallText: 'Požadavky přicházejí ze serveru, kde běží apps/api. Pokud server Flexi omezuje příchozí spojení, povolte jeho IP adresu. Server ve vnitřní síti lze testovat jen s FLEXI_CHECK_ALLOW_PRIVATE=true v prostředí API.',
       docsUrl: 'https://podpora.flexibee.eu/',
     },
     shoptet: {
@@ -600,7 +600,7 @@ export const cs = {
     codes: {
       resolved: 'Adresa {address}.',
       notFound: 'Server {host} se nepodařilo najít v DNS.',
-      blocked: 'Adresa {address} je místní nebo vnitřní, připojení není povoleno.',
+      blocked: 'Adresa je místní nebo vnitřní, připojení není povoleno.',
       open: 'Port {port} je otevřený, TLS spojení navázáno.',
       refused: 'Server spojení odmítl.',
       timeout: 'Server neodpověděl včas.',
