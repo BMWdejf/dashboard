@@ -9,5 +9,5 @@ export default function proxy(req: NextRequest) {
 
 export const config = {
   // Only protected pages. Keep /auth/*, /api/auth/* and static assets public.
-  matcher: ['/', '/account/:path*', '/settings/:path*', '/products/:path*'],
+  matcher: ['/', '/account/:path*', '/settings/:path*', '/products/:path*', '/integrations/:path*'],
 };
