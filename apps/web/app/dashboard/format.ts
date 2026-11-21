@@ -57,3 +57,16 @@ export function formatters(locale: Locale) {
 }
 
 export type Formatters = ReturnType<typeof formatters>;
+
+/** "před 5 minutami" / "5 minutes ago". */
+export function relative(at: Date, now: number, locale: Locale): string {
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), {
+    numeric: 'auto',
+  });
+  const s = Math.round((at.getTime() - now) / 1000);
+  const abs = Math.abs(s);
+  if (abs < 60) return rtf.format(s, 'second');
+  if (abs < 3600) return rtf.format(Math.round(s / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+  return rtf.format(Math.round(s / 86400), 'day');
+}
