@@ -33,6 +33,11 @@ export interface CheckDeps {
   lookup: (host: string) => Promise<string[]>;
   now?: () => number;
   timeoutMs?: number;
+  /**
+   * Flexi only: private networks are allowed (FLEXI_CHECK_ALLOW_PRIVATE).
+   * `fetch` must then be pinned with the same rule (see guardedLookup).
+   */
+  allowPrivate?: boolean;
 }
 
 const HOST = /^(?=.{1,253}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;

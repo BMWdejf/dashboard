@@ -82,6 +82,20 @@ export const apiEnv = z.object({
 });
 export type ApiEnv = z.infer<typeof apiEnv>;
 
+/**
+ * Pre-flight checks of new integrations (apps/api /integrations/checks).
+ * A Flexi check may reach private networks (a self-hosted server on the LAN)
+ * only when this is explicitly "true"; otherwise any signed-in user could use
+ * it to probe the API host's network.
+ */
+export const integrationChecksEnv = z.object({
+  FLEXI_CHECK_ALLOW_PRIVATE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+});
+export type IntegrationChecksEnv = z.infer<typeof integrationChecksEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),

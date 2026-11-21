@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { EnvError, flexiEnv, loadEnv, shoptetEnv } from './index';
+import { EnvError, flexiEnv, integrationChecksEnv, loadEnv, shoptetEnv } from './index';
 
 describe('loadEnv', () => {
   it('applies defaults', () => {
@@ -16,6 +16,12 @@ describe('loadEnv', () => {
       FLEXI_PASSWORD: 'p',
     });
     expect(env.FLEXI_DRY_RUN).toBe(true);
+  });
+
+  it('keeps private networks closed to integration checks by default', () => {
+    expect(loadEnv(integrationChecksEnv, {}).FLEXI_CHECK_ALLOW_PRIVATE).toBe(false);
+    expect(loadEnv(integrationChecksEnv, { FLEXI_CHECK_ALLOW_PRIVATE: 'true' }).FLEXI_CHECK_ALLOW_PRIVATE).toBe(true);
+    expect(() => loadEnv(integrationChecksEnv, { FLEXI_CHECK_ALLOW_PRIVATE: 'yes' })).toThrow(EnvError);
   });
 
   it('lists every missing variable', () => {

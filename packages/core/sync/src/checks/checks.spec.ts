@@ -9,6 +9,7 @@ import {
   feedCheckInput,
   feedEncoding,
   flexiCheckInput,
+  guardedLookup,
   inspectXml,
   networkFailure,
   parseCompanies,
@@ -65,6 +66,37 @@ describe('addressAllowed', () => {
   it('refuses anything that is not an IP address', () => {
     expect(addressAllowed('localhost', true)).toBe(false);
     expect(addressAllowed('127.1', true)).toBe(false);
+  });
+});
+
+describe('guardedLookup', () => {
+  type Addr = { address: string; family: number };
+  const base = (addrs: Addr[]) =>
+    ((_h: string, _o: unknown, cb: (err: NodeJS.ErrnoException | null, a: Addr[]) => void) => cb(null, addrs)) as Parameters<
+      typeof guardedLookup
+    >[1];
+  const call = (lookup: ReturnType<typeof guardedLookup>, all: boolean) =>
+    new Promise<{ err: NodeJS.ErrnoException | null; address: unknown; family?: number }>((resolve) =>
+      lookup('feed.example.cz', { all }, (err, address, family) => resolve({ err, address, family })),
+    );
+
+  it('passes public addresses in both callback shapes', async () => {
+    const lookup = guardedLookup(false, base([{ address: '93.184.216.34', family: 4 }]));
+    expect(await call(lookup, false)).toEqual({ err: null, address: '93.184.216.34', family: 4 });
+    expect((await call(lookup, true)).address).toEqual([{ address: '93.184.216.34', family: 4 }]);
+  });
+
+  it('refuses the connection when DNS now answers with an internal address', async () => {
+    const lookup = guardedLookup(false, base([{ address: '93.184.216.34', family: 4 }, { address: '::ffff:7f00:1', family: 6 }]));
+    const r = await call(lookup, true);
+    expect(r.err?.code).toBe('EADDRBLOCKED');
+    expect(networkFailure(Object.assign(new TypeError('fetch failed'), { cause: r.err })).code).toBe('blocked');
+  });
+
+  it('lets private addresses through only when allowed, loopback never', async () => {
+    expect((await call(guardedLookup(true, base([{ address: '10.1.2.3', family: 4 }])), false)).err).toBeNull();
+    expect((await call(guardedLookup(false, base([{ address: '10.1.2.3', family: 4 }])), false)).err?.code).toBe('EADDRBLOCKED');
+    expect((await call(guardedLookup(true, base([{ address: '127.0.0.1', family: 4 }])), false)).err?.code).toBe('EADDRBLOCKED');
   });
 });
 
@@ -144,13 +176,28 @@ describe('checkFlexi', () => {
     expect(tls.steps[1]).toMatchObject({ code: 'tls' });
   });
 
-  it('allows a LAN server but never loopback', async () => {
-    const lan = await checkFlexi(input, deps(async () => Response.json({ companies: { company: [] } }), ['192.168.1.20']));
+  it('refuses a LAN server unless private networks are allowed, and never loopback', async () => {
+    const ok = async () => Response.json({ companies: { company: [] } });
+    const closed = await checkFlexi(input, deps(ok, ['192.168.1.20']));
+    expect(closed.steps[0]).toEqual({ key: 'dns', status: 'failed', code: 'blocked' });
+    const lan = await checkFlexi(input, { ...deps(ok, ['192.168.1.20']), allowPrivate: true });
     expect(lan.steps[0]!.status).toBe('ok');
     const fetchMock = jest.fn(async () => new Response(''));
-    const local = await checkFlexi(input, { ...deps(fetchMock, ['127.0.0.1']), fetch: fetchMock as unknown as typeof fetch });
+    const local = await checkFlexi(input, { ...deps(fetchMock, ['127.0.0.1']), fetch: fetchMock as unknown as typeof fetch, allowPrivate: true });
     expect(local.steps[0]).toMatchObject({ status: 'failed', code: 'blocked' });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('gives one generic error for a failed LAN connection, so ports cannot be told apart', async () => {
+    for (const code of ['ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT', 'DEPTH_ZERO_SELF_SIGNED_CERT']) {
+      const r = await checkFlexi(input, { ...deps(async () => Promise.reject(fetchError(code)), ['10.0.0.7']), allowPrivate: true });
+      expect(r.steps[1]).toEqual({ key: 'connect', status: 'failed', code: 'unreachable', params: { port: 5434, reason: '—' } });
+    }
+  });
+
+  it('reports a connection the pinned lookup refused (DNS rebinding)', async () => {
+    const r = await checkFlexi(input, deps(async () => Promise.reject(fetchError('EADDRBLOCKED'))));
+    expect(r.steps[1]).toEqual({ key: 'connect', status: 'failed', code: 'blocked' });
   });
 
   it('says when the answer is not from Flexi', async () => {

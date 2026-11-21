@@ -539,7 +539,7 @@ export const en: Dictionary = {
       guideRole: 'Recommended role',
       guideRoleText: 'The sync only reads. Product edits write, and only when dry-run is off in the API (FLEXI_DRY_RUN=false).',
       guideFirewall: 'Firewall',
-      guideFirewallText: 'Requests come from the server running apps/api. If your Flexi server restricts incoming traffic, allow its IP address.',
+      guideFirewallText: 'Requests come from the server running apps/api. If your Flexi server restricts incoming traffic, allow its IP address. A server on an internal network can be tested only with FLEXI_CHECK_ALLOW_PRIVATE=true in the API’s environment.',
       docsUrl: 'https://podpora.flexibee.eu/',
     },
     shoptet: {
@@ -596,7 +596,7 @@ export const en: Dictionary = {
     codes: {
       resolved: 'Address {address}.',
       notFound: 'Could not find {host} in DNS.',
-      blocked: 'Address {address} is local or internal; connecting is not allowed.',
+      blocked: 'The address is local or internal; connecting is not allowed.',
       open: 'Port {port} is open, TLS connection established.',
       refused: 'The server refused the connection.',
       timeout: 'The server did not answer in time.',

@@ -59,6 +59,42 @@ export function addressAllowed(ip: string, allowPrivate: boolean): boolean {
   return allowPrivate || !PRIVATE.check(lit.address, lit.family);
 }
 
+/** A private-network address (10/8, 172.16/12, 192.168/16, fc00::/7, also IPv4-mapped). */
+export function isPrivateAddress(ip: string): boolean {
+  const lit = ipLiteral(ip);
+  return !!lit && PRIVATE.check(lit.address, lit.family);
+}
+
+type LookupAddress = { address: string; family: number };
+type LookupCallback = (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void;
+type BaseLookup = (
+  hostname: string,
+  options: { all: true; family?: number; hints?: number },
+  callback: (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
+) => void;
+
+/**
+ * A `lookup` for net/tls `connect` (undici Agent `connect.lookup`) that refuses
+ * any resolved address `addressAllowed` rejects. It runs at connect time, so
+ * the connection goes only to an address that passed the check: a DNS answer
+ * that changes between the "dns" step and the request (rebinding) is caught.
+ */
+export function guardedLookup(allowPrivate: boolean, base: BaseLookup) {
+  return (hostname: string, options: { all?: boolean; family?: number; hints?: number }, callback: LookupCallback) => {
+    base(hostname, { family: options.family, hints: options.hints, all: true }, (err, addresses) => {
+      if (err) return callback(err, '');
+      const bad = addresses.find((a) => !addressAllowed(a.address, allowPrivate));
+      if (bad || addresses.length === 0) {
+        const e: NodeJS.ErrnoException = new Error(`Address not allowed for ${hostname}`);
+        e.code = 'EADDRBLOCKED';
+        return callback(e, '');
+      }
+      if (options.all) return callback(null, addresses);
+      callback(null, addresses[0]!.address, addresses[0]!.family);
+    });
+  };
+}
+
 /** Resolves the host and checks every address; the "dns" step. */
 export async function resolveStep(
   host: string,
@@ -81,18 +117,23 @@ export async function resolveStep(
   }
   if (addresses.length === 0) return { key: 'dns', status: 'failed', code: 'notFound', params: { host: bare } };
   const blocked = addresses.find((a) => !addressAllowed(a, allowPrivate));
-  if (blocked) return { key: 'dns', status: 'failed', code: 'blocked', params: { address: blocked } };
+  // The address itself is not echoed: it could reveal internal DNS.
+  if (blocked) return { key: 'dns', status: 'failed', code: 'blocked' };
   return { key: 'dns', status: 'ok', code: 'resolved', params: { address: addresses[0]! } };
 }
 
 /** Why a fetch failed, from undici's error causes. */
-export function networkFailure(e: unknown): { code: 'timeout' | 'refused' | 'tls' | 'unreachable'; reason: string } {
+export function networkFailure(e: unknown): {
+  code: 'timeout' | 'refused' | 'tls' | 'unreachable' | 'blocked';
+  reason: string;
+} {
   const err = e as { name?: string; code?: string; cause?: { code?: string; name?: string } };
   const code = err.cause?.code ?? err.code ?? '';
   const name = err.name === 'TypeError' ? (err.cause?.name ?? '') : (err.name ?? '');
   if (name === 'TimeoutError' || name === 'AbortError' || /TIMEOUT|ETIMEDOUT/.test(code)) {
     return { code: 'timeout', reason: code || name };
   }
+  if (code === 'EADDRBLOCKED') return { code: 'blocked', reason: code };
   if (/^(ECONNREFUSED|ECONNRESET|EPIPE)$/.test(code)) return { code: 'refused', reason: code };
   if (/CERT|SSL|TLS|SELF_SIGNED|UNABLE_TO_VERIFY|HOSTNAME_MISMATCH|ALTNAME/.test(code)) {
     return { code: 'tls', reason: code };
