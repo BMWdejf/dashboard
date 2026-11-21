@@ -195,6 +195,18 @@ describe('checkFlexi', () => {
     }
   });
 
+  it('stays generic with private networks allowed even when DNS gave a public address', async () => {
+    // A rebinding DNS can answer public for the "dns" step and private at connect time.
+    const r = await checkFlexi(input, { ...deps(async () => Promise.reject(fetchError('ECONNREFUSED'))), allowPrivate: true });
+    expect(r.steps[0]).toMatchObject({ status: 'ok' });
+    expect(r.steps[1]).toEqual({ key: 'connect', status: 'failed', code: 'unreachable', params: { port: 5434, reason: '—' } });
+  });
+
+  it('keeps detailed errors for public servers when private networks are closed', async () => {
+    const r = await checkFlexi(input, deps(async () => Promise.reject(fetchError('ECONNREFUSED'))));
+    expect(r.steps[1]).toMatchObject({ code: 'refused' });
+  });
+
   it('reports a connection the pinned lookup refused (DNS rebinding)', async () => {
     const r = await checkFlexi(input, deps(async () => Promise.reject(fetchError('EADDRBLOCKED'))));
     expect(r.steps[1]).toEqual({ key: 'connect', status: 'failed', code: 'blocked' });

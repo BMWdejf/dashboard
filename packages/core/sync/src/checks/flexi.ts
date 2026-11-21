@@ -21,9 +21,9 @@ export function parseCompanies(json: unknown): FlexiCheckInfo['companies'] | nul
 /**
  * ABRA Flexi REST API: host resolves (LAN only with `deps.allowPrivate`), the
  * TLS port answers, and the user can list companies (GET /c.json). Read-only;
- * the password is only sent to the Flexi server. For a private address a
- * failed connection is reported as one generic "unreachable", so the check
- * can't be used to tell closed, filtered and TLS ports apart on the LAN.
+ * the password is only sent to the Flexi server. With private networks
+ * allowed, a failed connection is always one generic "unreachable", so the
+ * check can't be used to tell closed, filtered and TLS ports apart on the LAN.
  */
 export async function checkFlexi(input: FlexiCheckInput, deps: CheckDeps): Promise<CheckResult<FlexiCheckInfo>> {
   const now = deps.now ?? Date.now;
@@ -46,7 +46,9 @@ export async function checkFlexi(input: FlexiCheckInput, deps: CheckDeps): Promi
     });
   } catch (e) {
     const f = networkFailure(e);
-    const lan = isPrivateAddress(String(dns.params?.address ?? ''));
+    // With private networks allowed, the address used at connect time may
+    // differ from the "dns" step (rebinding), so every failure stays generic.
+    const lan = (deps.allowPrivate ?? false) || isPrivateAddress(String(dns.params?.address ?? ''));
     const connect: CheckStep =
       f.code === 'blocked'
         ? { key: 'connect', status: 'failed', code: 'blocked' }

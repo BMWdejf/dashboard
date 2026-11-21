@@ -3,10 +3,10 @@ import { lookup } from 'node:dns/promises';
 import type { LookupFunction } from 'node:net';
 
 import { Module } from '@nestjs/common';
-import { Agent, fetch as undiciFetch } from 'undici';
+import { Agent, buildConnector, fetch as undiciFetch } from 'undici';
 
 import { integrationChecksEnv, loadEnv, shoptetEnv } from '@repo/core-config';
-import { guardedLookup } from '@repo/core-sync';
+import { addressAllowed, guardedLookup, ipLiteral } from '@repo/core-sync';
 
 import { SyncTokenGuard } from '../flexi-sync/sync-token.guard';
 import { IntegrationChecksController } from './integration-checks.controller';
@@ -16,19 +16,31 @@ import { CHECK_DEPS, IntegrationChecksService, type IntegrationCheckDeps } from 
 const shoptetUrlEnv = shoptetEnv.pick({ SHOPTET_API_URL: true });
 
 /**
- * fetch whose connections go only to addresses the check allows: the lookup
- * runs at connect time (DNS rebinding can't swap in an internal address after
- * the "dns" step), on every redirect hop too.
+ * fetch whose connections go only to addresses the check allows:
+ * - host names: the lookup runs at connect time, so DNS rebinding can't swap
+ *   in an internal address after the "dns" step;
+ * - IP literals (no lookup happens): checked by the connector itself;
+ * - redirects are never followed automatically; callers follow them by hand
+ *   and check each Location (checkFeed does).
  */
 export function pinnedFetch(allowPrivate: boolean): typeof fetch {
+  const connector = buildConnector({
+    // Same contract as dns.lookup; only the option types are narrower.
+    lookup: guardedLookup(allowPrivate, dnsLookup as Parameters<typeof guardedLookup>[1]) as unknown as LookupFunction,
+  });
   const dispatcher = new Agent({
-    connect: {
-      // Same contract as dns.lookup; only the option types are narrower.
-      lookup: guardedLookup(allowPrivate, dnsLookup as Parameters<typeof guardedLookup>[1]) as unknown as LookupFunction,
+    connect: (opts, callback) => {
+      const lit = ipLiteral(opts.hostname);
+      if (lit && !addressAllowed(lit.address, allowPrivate)) {
+        const e: NodeJS.ErrnoException = new Error(`Address not allowed: ${opts.hostname}`);
+        e.code = 'EADDRBLOCKED';
+        return callback(e, null);
+      }
+      return connector(opts, callback);
     },
   });
   return ((input: string | URL, init?: RequestInit) =>
-    undiciFetch(input, { ...(init as object), dispatcher })) as unknown as typeof fetch;
+    undiciFetch(input, { ...(init as object), redirect: 'manual', dispatcher })) as unknown as typeof fetch;
 }
 
 @Module({

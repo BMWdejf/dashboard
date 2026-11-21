@@ -38,4 +38,15 @@ describe('pinnedFetch', () => {
     }
     expect(hits).toBe(0);
   });
+
+  it('refuses an IP literal the lookup never sees, also inside IPv6', async () => {
+    for (const host of ['127.0.0.1', '[::ffff:127.0.0.1]']) {
+      const error = await pinnedFetch(true)(`http://${host}:${port}/feed.xml`).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(networkFailure(error).code).toBe('blocked');
+    }
+    expect(hits).toBe(0);
+  });
 });
