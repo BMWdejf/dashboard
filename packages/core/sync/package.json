@@ -19,6 +19,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./feed-mapping": {
+      "types": "./dist/supplier-feed/mapping.d.ts",
+      "default": "./dist/supplier-feed/mapping.js"
     }
   },
   "dependencies": {

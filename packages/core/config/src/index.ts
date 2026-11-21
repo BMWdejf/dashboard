@@ -96,6 +96,18 @@ export const integrationChecksEnv = z.object({
 });
 export type IntegrationChecksEnv = z.infer<typeof integrationChecksEnv>;
 
+/**
+ * Supplier XML feeds: the API process imports due feeds every minute unless
+ * this is "false" (e.g. when a cron calls GET /supplier-feeds/cron instead).
+ */
+export const supplierFeedEnv = z.object({
+  SUPPLIER_FEED_SCHEDULER: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+});
+export type SupplierFeedEnv = z.infer<typeof supplierFeedEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),

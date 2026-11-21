@@ -101,7 +101,7 @@ export function feedEncoding(contentType: string | null, head: Uint8Array): stri
 }
 
 /** Decodes the body with a byte limit; throws 'tooLarge' past it. */
-async function* decodeBody(
+export async function* decodeBody(
   body: ReadableStream<Uint8Array>,
   contentType: string | null,
   counter: { bytes: number; encoding: string },
@@ -119,6 +119,56 @@ async function* decodeBody(
   if (decoder) yield decoder.decode();
 }
 
+export type OpenedFeed =
+  | { ok: true; res: Response & { body: ReadableStream<Uint8Array> }; url: URL; endpoint: CheckStep }
+  | { ok: false; step: CheckStep };
+
+/**
+ * GETs a feed from a public address: the host is re-checked on every
+ * redirect (at most 3, http(s) only) and the final answer must be 200 with a
+ * body. The "endpoint" step either way.
+ */
+export async function openFeed(input: string, deps: CheckDeps, signal: AbortSignal): Promise<OpenedFeed> {
+  let url = new URL(input);
+  let res: Response | null = null;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const dns = await resolveStep(url.hostname, deps, false);
+    if (dns.status === 'failed') return { ok: false, step: { ...dns, key: 'endpoint' } };
+    try {
+      res = await deps.fetch(url, {
+        headers: { Accept: 'application/xml, text/xml, */*' },
+        redirect: 'manual',
+        signal,
+      });
+    } catch (e) {
+      const f = networkFailure(e);
+      return { ok: false, step: { key: 'endpoint', status: 'failed', code: f.code, params: { reason: f.reason } } };
+    }
+    const location = res.headers.get('location');
+    if (res.status >= 300 && res.status < 400 && location) {
+      await res.body?.cancel().catch(() => undefined);
+      const next = new URL(location, url);
+      if (next.protocol !== 'https:' && next.protocol !== 'http:') {
+        return { ok: false, step: { key: 'endpoint', status: 'failed', code: 'badRedirect' } };
+      }
+      url = next;
+      res = null;
+      continue;
+    }
+    break;
+  }
+  if (!res) return { ok: false, step: { key: 'endpoint', status: 'failed', code: 'tooManyRedirects' } };
+  if (!res.ok || !res.body) {
+    await res.body?.cancel().catch(() => undefined);
+    return { ok: false, step: { key: 'endpoint', status: 'failed', code: 'httpStatus', params: { status: res.status } } };
+  }
+  const endpoint: CheckStep =
+    url.protocol === 'https:'
+      ? { key: 'endpoint', status: 'ok', code: 'https', params: { status: res.status } }
+      : { key: 'endpoint', status: 'warn', code: 'noTls', params: { status: res.status } };
+  return { ok: true, res: res as Response & { body: ReadableStream<Uint8Array> }, url, endpoint };
+}
+
 /**
  * Supplier XML feed: the URL resolves to a public address (no LAN, no
  * loopback, re-checked on every redirect), answers 200, the body is
@@ -128,51 +178,12 @@ export async function checkFeed(input: FeedCheckInput, deps: CheckDeps): Promise
   const now = deps.now ?? Date.now;
   const started = now();
   const signal = AbortSignal.timeout(deps.timeoutMs ?? 60_000);
-  const fail = (step: CheckStep): CheckResult<FeedCheckInfo> => ({
-    ok: false,
-    steps: [step, skipped('xml'), skipped('dialect')],
-    latencyMs: null,
-    info: null,
-  });
-
-  let url = new URL(input.url);
-  let res: Response | null = null;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const dns = await resolveStep(url.hostname, deps, false);
-    if (dns.status === 'failed') return fail({ ...dns, key: 'endpoint' });
-    try {
-      res = await deps.fetch(url, {
-        headers: { Accept: 'application/xml, text/xml, */*' },
-        redirect: 'manual',
-        signal,
-      });
-    } catch (e) {
-      const f = networkFailure(e);
-      return fail({ key: 'endpoint', status: 'failed', code: f.code, params: { reason: f.reason } });
-    }
-    const location = res.headers.get('location');
-    if (res.status >= 300 && res.status < 400 && location) {
-      await res.body?.cancel().catch(() => undefined);
-      const next = new URL(location, url);
-      if (next.protocol !== 'https:' && next.protocol !== 'http:') {
-        return fail({ key: 'endpoint', status: 'failed', code: 'badRedirect' });
-      }
-      url = next;
-      res = null;
-      continue;
-    }
-    break;
+  const opened = await openFeed(input.url, deps, signal);
+  if (!opened.ok) {
+    return { ok: false, steps: [opened.step, skipped('xml'), skipped('dialect')], latencyMs: null, info: null };
   }
-  if (!res) return fail({ key: 'endpoint', status: 'failed', code: 'tooManyRedirects' });
-  if (!res.ok || !res.body) {
-    await res.body?.cancel().catch(() => undefined);
-    return fail({ key: 'endpoint', status: 'failed', code: 'httpStatus', params: { status: res.status } });
-  }
+  const { res, endpoint } = opened;
   const latencyMs = now() - started;
-  const endpoint: CheckStep =
-    url.protocol === 'https:'
-      ? { key: 'endpoint', status: 'ok', code: 'https', params: { status: res.status } }
-      : { key: 'endpoint', status: 'warn', code: 'noTls', params: { status: res.status } };
 
   const counter = { bytes: 0, encoding: 'utf-8' };
   const parseStart = now();

@@ -11,7 +11,10 @@ A Turborepo monorepo (pnpm workspaces):
   the web app calls it with `API_URL` + `SYNC_API_TOKEN`), and
   `/integrations/checks/{flexi,shoptet,feed}` (read-only pre-flight checks for
   /integrations/new; public addresses only, a LAN Flexi needs
-  `FLEXI_CHECK_ALLOW_PRIVATE=true`). Manual run:
+  `FLEXI_CHECK_ALLOW_PRIVATE=true`), and `/supplier-feeds` (supplier XML feeds:
+  mapping preview, save, import into `supplier_feed_item`; due feeds are imported
+  every minute unless `SUPPLIER_FEED_SCHEDULER=false`, or via
+  `GET /supplier-feeds/cron`). Manual run:
   `pnpm --filter api sync:flexi [--full]`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
@@ -28,8 +31,10 @@ A Turborepo monorepo (pnpm workspaces):
     `prisma/migrations`, and query functions. `examples_data` holds the
     dashboard's example data (`getDashboardExamples()`); reseed it with
     `pnpm --filter @repo/core-db db:seed-examples`.
-  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions, and the
-    Flexi → Neon mirror sync (`flexi-mirror/`).
+  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions, the
+    Flexi → Neon mirror sync (`flexi-mirror/`), and supplier XML feeds
+    (`supplier-feed/`: streaming item parser, tag → column mapping; the pure
+    mapping is also exported as `@repo/core-sync/feed-mapping` for the web).
   - `scraper` (`@repo/core-scraper`): Playwright runner (host allow-list,
     robots.txt, delays, schema validation) and per-site extractors.
 

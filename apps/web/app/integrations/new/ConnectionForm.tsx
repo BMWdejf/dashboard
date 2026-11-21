@@ -28,12 +28,23 @@ const INITIAL: Record<ConnectionKind, Record<string, string>> = {
 
 /**
  * One configuration page: the form (left card), the live diagnostic and the
- * security guide (right column). "Test" runs the API's pre-flight check;
- * nothing is saved, so after a good test the page shows the env lines to set.
+ * security guide (right column). "Test" runs the API's pre-flight check.
+ * Flexi and Shoptet save nothing, so after a good test the page shows the env
+ * lines to set; a feed continues to the mapping step (`onContinue`).
  */
-export function ConnectionForm({ kind, t }: { kind: ConnectionKind; t: T }) {
+export function ConnectionForm({
+  kind,
+  t,
+  initial,
+  onContinue,
+}: {
+  kind: ConnectionKind;
+  t: T;
+  initial?: Record<string, string>;
+  onContinue?: (values: Record<string, string>, info: FeedCheckInfo) => void;
+}) {
   const tk = t[kind];
-  const [values, setValues] = useState(INITIAL[kind]);
+  const [values, setValues] = useState(initial ?? INITIAL[kind]);
   const [pending, start] = useTransition();
   const [result, setResult] = useState<AnyCheckResult | null>(null);
   const [error, setError] = useState<{ message: string; details: string[] } | null>(null);
@@ -101,6 +112,8 @@ export function ConnectionForm({ kind, t }: { kind: ConnectionKind; t: T }) {
   const insecure = (values.url ?? '').trim().toLowerCase().startsWith('http://');
   const testLabel = kind === 'feed' ? t.feed.test : t.test;
   const saveLabel = kind === 'feed' ? t.feed.save : t.save;
+  const feedInfo = kind === 'feed' && result?.ok ? (result.info as FeedCheckInfo | null) : null;
+  const canContinue = !!onContinue && !!feedInfo?.itemElement && !pending;
 
   return (
     <>
@@ -224,12 +237,20 @@ export function ConnectionForm({ kind, t }: { kind: ConnectionKind; t: T }) {
             <button type="submit" className={styles.secondary} disabled={pending}>
               {pending ? t.testing : testLabel}
             </button>
-            <button type="button" className={styles.primary} aria-disabled="true" title={tk.saveHint} aria-describedby={`${id}-save`}>
-              {saveLabel}
-            </button>
-            <p id={`${id}-save`} className={styles.saveHint}>
-              {tk.saveHint}
-            </p>
+            {canContinue ? (
+              <button type="button" className={styles.primary} onClick={() => onContinue!(values, feedInfo!)}>
+                {saveLabel}
+              </button>
+            ) : (
+              <>
+                <button type="button" className={styles.primary} aria-disabled="true" title={tk.saveHint} aria-describedby={`${id}-save`}>
+                  {saveLabel}
+                </button>
+                <p id={`${id}-save`} className={styles.saveHint}>
+                  {tk.saveHint}
+                </p>
+              </>
+            )}
           </div>
         </form>
 
