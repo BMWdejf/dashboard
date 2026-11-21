@@ -74,6 +74,15 @@ describe('parseFeedItems', () => {
     expect(items).toEqual([{ ITEM_ID: ['1'], EAN: [''] }]);
   });
 
+  it('stops an item that nests too deep or has too many values', async () => {
+    const deep = `<SHOP><SHOPITEM>${'<a>'.repeat(20)}x${'</a>'.repeat(20)}</SHOPITEM></SHOP>`;
+    await expect(parseAll(deep)).rejects.toMatchObject({ code: 'tooComplex' });
+    const wide = `<SHOP><SHOPITEM><ITEM_ID>1</ITEM_ID>${'<A>x</A>'.repeat(6_000)}</SHOPITEM></SHOP>`;
+    await expect(parseAll(wide)).rejects.toMatchObject({ code: 'tooComplex' });
+    const params = `<SHOP><SHOPITEM>${'<PARAM><PARAM_NAME>B</PARAM_NAME><VAL>c</VAL></PARAM>'.repeat(3_000)}</SHOPITEM></SHOP>`;
+    await expect(parseAll(params)).resolves.toHaveLength(1);
+  });
+
   it('throws malformed with the line, and noItems when nothing matches', async () => {
     await expect(parseAll('<SHOP><SHOPITEM><A>1</B></SHOPITEM></SHOP>')).rejects.toMatchObject({ code: 'malformed' });
     await expect(parseAll('<SHOP><X/></SHOP>')).rejects.toMatchObject({ code: 'noItems' });

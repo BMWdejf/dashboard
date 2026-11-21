@@ -49,11 +49,27 @@ export const UPSERT_SUPPLIER_ITEMS_SQL = [
 export const MARK_REMOVED_SUPPLIER_ITEMS_SQL = `UPDATE supplier_feed_item SET removed_at = $2
 WHERE feed_id = $1::uuid AND last_seen_at < $2 AND removed_at IS NULL`;
 
-/** Rows as JSON for $1, in chunks; NUL bytes removed (Postgres can't store them). */
+const NUL = /\u0000/g; // eslint-disable-line no-control-regex
+
+/** Drops NUL from every string and object key (Postgres text/jsonb can't hold it). */
+function stripNul(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(NUL, '');
+  if (Array.isArray(value)) return value.map(stripNul);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k.replace(NUL, ''), stripNul(v)]));
+  }
+  return value;
+}
+
+/**
+ * Rows as JSON for $1, in chunks. NUL is removed from the values before
+ * serialising, never from the JSON text: editing the text could turn a
+ * feed's literal "\\u0000" into a broken escape.
+ */
 export function supplierItemChunks(rows: SupplierFeedItemRow[], size = SUPPLIER_ITEM_CHUNK): string[] {
   const out: string[] = [];
   for (let i = 0; i < rows.length; i += size) {
-    out.push(JSON.stringify(toSnakeRows(rows.slice(i, i + size))).replace(/\\u0000/g, ''));
+    out.push(JSON.stringify(stripNul(toSnakeRows(rows.slice(i, i + size)))));
   }
   return out;
 }

@@ -11,6 +11,12 @@ export const FEED_LIMITS = {
   valueLength: 100_000,
   /** Values kept of one tag in one item (e.g. Heureka ACCESSORY). */
   valuesPerTag: 200,
+  /** Elements nested inside one item. */
+  depth: 8,
+  /** Leaf values of one item (Heureka items have ~50; ACCESSORY lists can be long). */
+  leavesPerItem: 5_000,
+  /** Characters of one tag path. */
+  pathLength: 300,
 } as const;
 
 interface Frame {
@@ -23,7 +29,7 @@ interface Frame {
 
 export class FeedParseError extends Error {
   constructor(
-    public readonly code: 'malformed' | 'tooManyItems' | 'noItems',
+    public readonly code: 'malformed' | 'tooManyItems' | 'noItems' | 'tooComplex',
     public readonly params: Record<string, string | number> = {},
   ) {
     super(code);
@@ -50,6 +56,8 @@ export async function parseFeedItems(
   const paramNames = new Map<string, string>();
   const tags = new Set<string>();
   let stack: Frame[] | null = null;
+  /** Leaves collected so far in the current item; checked as they are pushed. */
+  let leaves = 0;
   let error: FeedParseError | null = null;
   let count = 0;
 
@@ -66,13 +74,25 @@ export async function parseFeedItems(
       message: e.message.replace(/^.*?:\d+:\d+: /, '').slice(0, 160),
     });
   });
+  const tooComplex = () => {
+    error ??= new FeedParseError('tooComplex', {
+      depth: FEED_LIMITS.depth,
+      leaves: FEED_LIMITS.leavesPerItem,
+    });
+  };
+
   parser.on('opentag', (tag) => {
+    if (error) return;
     if (stack) {
+      if (stack.length > FEED_LIMITS.depth) return tooComplex();
       stack[stack.length - 1]!.hasChildren = true;
       stack.push({ name: tag.name, text: '', hasChildren: false, leaves: [] });
     } else if (lower(tag.name) === item) {
-      const leaves = Object.entries(tag.attributes).map(([k, v]) => [`@${k}`, String(v)] as [string, string]);
-      stack = [{ name: tag.name, text: '', hasChildren: false, leaves }];
+      const itemLeaves = Object.entries(tag.attributes)
+        .slice(0, FEED_LIMITS.leavesPerItem)
+        .map(([k, v]) => [`@${k}`, String(v).slice(0, FEED_LIMITS.valueLength)] as [string, string]);
+      leaves = itemLeaves.length;
+      stack = [{ name: tag.name, text: '', hasChildren: false, leaves: itemLeaves }];
     }
     if (tag.isSelfClosing) close();
   });
@@ -86,8 +106,15 @@ export async function parseFeedItems(
     if (!tag.isSelfClosing) close();
   });
 
+  /** Adds a leaf to `frame`, enforcing the per-item limits as it goes. */
+  function push(frame: Frame, path: string, value: string) {
+    if (path.length > FEED_LIMITS.pathLength) return;
+    if (++leaves > FEED_LIMITS.leavesPerItem) return tooComplex();
+    frame.leaves.push([path, value]);
+  }
+
   function close() {
-    if (!stack) return;
+    if (!stack || error) return;
     const frame = stack.pop()!;
     if (stack.length === 0) {
       stack = null;
@@ -96,18 +123,24 @@ export async function parseFeedItems(
     }
     const parent = stack[stack.length - 1]!;
     if (!frame.hasChildren) {
-      parent.leaves.push([frame.name, frame.text.slice(0, FEED_LIMITS.valueLength)]);
+      push(parent, frame.name, frame.text.slice(0, FEED_LIMITS.valueLength));
       return;
     }
     if (lower(frame.name) === 'param') {
       const name = frame.leaves.find(([k]) => lower(k) === 'param_name')?.[1];
       const val = frame.leaves.find(([k]) => lower(k) === 'val' || lower(k) === 'value')?.[1];
       if (name?.trim() && val !== undefined) {
-        parent.leaves.push([`PARAM[${paramLabel(name)}]`, val]);
+        // The pair's own two leaves are replaced by one.
+        leaves -= frame.leaves.length;
+        push(parent, `PARAM[${paramLabel(name)}]`, val);
         return;
       }
     }
-    for (const [k, v] of frame.leaves) parent.leaves.push([`${frame.name}/${k}`, v]);
+    // Moving leaves up one level doesn't add any; only the path grows.
+    for (const [k, v] of frame.leaves) {
+      const path = `${frame.name}/${k}`;
+      if (path.length <= FEED_LIMITS.pathLength) parent.leaves.push([path, v]);
+    }
   }
 
   function emit(frame: Frame) {
