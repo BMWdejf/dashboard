@@ -18,6 +18,7 @@
         "NEON_AUTH_BASE_URL",
         "NEON_AUTH_COOKIE_SECRET",
         "DATABASE_URL",
+        "API_URL",
         "SYNC_API_TOKEN",
         "NODE_ENV"
       ]

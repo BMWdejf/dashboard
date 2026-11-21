@@ -48,7 +48,11 @@ This skill holds **this project's** rules.
   in the 183×50 top row; rows end with a "⋯" menu (`RowActions.tsx`: detail,
   copy code/EAN; edit, duplicate and delete are shown disabled until writing
   to Flexi is decided). Search updates while typing (`ProductSearch.tsx`, 300 ms).
-  `/products/[id]` is the detail (no frame in the design; built from the same cards).
+  `/products/[id]` follows `Product detail.json` (1280 frame, measured in the
+  browser: top bar 64, header 93, product & channel card 235, mapping table
+  card 619 vs 620.5, three cards 292×424). Only Flexi data is real; the supplier
+  XML feed and Shoptet show "Nepřipojeno"/"—" until those integrations exist,
+  and buttons that would write or start a sync are disabled with a tooltip.
   The export has no styles below the card level: table cells, pills and badges
   use the theme tokens.
 - **Source of truth**: the pages `Screens` (finished screens) and
@@ -111,6 +115,14 @@ DESIGN.md confirms `#cb3cff` is primary and `#6c72ff` secondary.
 - A Figma component without a code counterpart: build it in `packages/ui`
   (see `next-page`), then add the Code Connect mapping.
 - Match variants and props by name (`variant=primary` → `variant="primary"`).
+
+## Editable screens
+
+- Product detail is the pattern: a client `ProductEditor` context
+  (`apps/web/app/products/[id]/Editor.tsx`) holds drafts over server props;
+  header buttons (discard, sync, save with a change count), a status bar with
+  `aria-live`, inputs styled as the design's cells. Keep the design's sizes:
+  editing controls must not change card heights.
 
 ## Building a screen
 

@@ -9,3 +9,5 @@ export * from './settings';
 export * from './products';
 export * from './flexi-mirror';
 export * from './flexi-mirror-sql';
+export * from './shoptet-logic';
+export * from './shoptet-settings';

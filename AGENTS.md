@@ -6,7 +6,9 @@ A Turborepo monorepo (pnpm workspaces):
   products from the Flexi mirror and `/settings/*` the user's settings; all need a session (`proxy.ts` redirects to
   `/auth/sign-in`). E-mail sign-up/sign-in with Neon Auth under `/auth/*`.
 - `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links` and
-  `/sync/flexi` (Flexi → Neon product mirror; needs `SYNC_API_TOKEN`). Manual run:
+  `/sync/flexi` (Flexi → Neon product mirror; needs `SYNC_API_TOKEN`) and
+  `/products/:flexiId` (product edits to Flexi, dry-run unless `FLEXI_DRY_RUN=false`;
+  the web app calls it with `API_URL` + `SYNC_API_TOKEN`). Manual run:
   `pnpm --filter api sync:flexi [--full]`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
