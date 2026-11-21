@@ -858,7 +858,9 @@ export function MappingTable() {
 
   /** CSV of the table (UTF-8 with BOM for Excel), values as the user sees them. */
   function exportCsv() {
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    // Quote every cell; a leading = + - @ tab or CR would start a spreadsheet formula.
+    const esc = (v: string) =>
+      `"${(/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
     const lines = [
       [te.csvAttribute, te.csvFlexi, te.csvRule, te.csvShoptet],
       ...rows.map((r) => [r.label, r.flexiText, r.rule.text, r.shoptetText]),
