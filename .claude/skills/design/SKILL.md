@@ -65,6 +65,15 @@ This skill holds **this project's** rules.
   starts `POST /sync/flexi` through the API (read-only for Flexi); "Přidat
   integraci" is disabled with a tooltip. The table fits the 916 card instead of
   the design's 1290 sideways scroll; filter pills are links (`?type=`).
+- **Add integration** (`/integrations/new`): a chooser (REST API / Shop / XML
+  feed) and `/integrations/new/[kind]` built from `Configuration Flexibe Data
+  REST API integration.json` and `Configuration XML feed Data integration.json`
+  (Shoptet reuses the REST API layout; it has no frame). "Test" runs real
+  read-only checks through the API (`POST /integrations/checks/:kind`, logic in
+  `@repo/core-sync` `checks/`); nothing is saved, so save stays disabled and a
+  good test shows the env lines to set. Dropped from the design as untrue for
+  this app: the static gateway IP and its checkbox, AES-256/HSM storage claims
+  and the base currency select (no setting uses it).
 - **Source of truth**: the pages `Screens` (finished screens) and
   `Components` (the library). Frames in other pages are drafts. Don't build
   from them unless the task links one explicitly.
