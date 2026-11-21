@@ -16,6 +16,7 @@
     "@neon/auth": "0.8.2",
     "@repo/core-config": "workspace:*",
     "@repo/core-db": "workspace:*",
+    "@repo/core-sync": "workspace:*",
     "@repo/ui": "workspace:*",
     "next": "16.4.2",
     "react": "19.3.1",

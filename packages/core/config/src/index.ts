@@ -72,6 +72,16 @@ export const syncEnv = z.object({
 });
 export type SyncEnv = z.infer<typeof syncEnv>;
 
+/**
+ * The web app's server side calling our API (apps/api) for anything that talks
+ * to Flexi: product edits and on-demand syncs.
+ */
+export const apiEnv = z.object({
+  API_URL: z.url().default('http://localhost:3000'),
+  SYNC_API_TOKEN: z.string().min(32).optional(),
+});
+export type ApiEnv = z.infer<typeof apiEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),

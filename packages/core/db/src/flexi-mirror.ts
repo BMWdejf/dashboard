@@ -131,3 +131,12 @@ export async function getFlexiSyncRun(id: string) {
 export async function getLastFlexiSync() {
   return getDb().flexiSyncRun.findFirst({ orderBy: { startedAt: 'desc' } });
 }
+
+/** Latest sync runs, newest first, for the run log on the product detail. */
+export async function getRecentFlexiSyncRuns(limit = 6) {
+  return getDb().flexiSyncRun.findMany({
+    orderBy: { startedAt: 'desc' },
+    take: limit,
+    select: { id: true, trigger: true, status: true, startedAt: true, finishedAt: true, counts: true, error: true },
+  });
+}

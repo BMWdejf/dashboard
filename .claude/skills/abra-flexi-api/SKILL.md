@@ -83,6 +83,19 @@ An evidence's fields are listed by the server itself at
   movements: stock after day D = current stock − Σ changes after D. Written only
   before each product's first real history row.
 
+## Product edits (dashboard → Flexi)
+
+- The product detail page (`apps/web/app/products/[id]`) saves through a server
+  action → `PATCH /products/:flexiId` on our API (bearer `SYNC_API_TOKEN`); the web
+  app never calls Flexi itself. It needs `API_URL` and `SYNC_API_TOKEN` in `apps/web`.
+- Allowed changes and the `cenik` record: `productChangesSchema` / `buildCenikUpdate`
+  in `packages/core/sync/src/flexi-mirror/write.ts` (`nazev`, `nakupCena`,
+  `cenaZakl`, `typSzbDphK`, `skupZboz`, `exportNaEshop`).
+- The API's writer follows `FLEXI_DRY_RUN` (default `true`): the UI then says the
+  change was only validated. With it `false`, the API re-reads that one product
+  into the mirror (`syncOneProduct`); `POST /products/:flexiId/sync` does the same
+  on demand. Flexi 4xx errors come back as 422 with Flexi's messages.
+
 ## Evidences we use
 
 | Evidence | What | Notes |

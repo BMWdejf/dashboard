@@ -286,6 +286,7 @@ model FlexiCenik {
   dodavatele    FlexiCenikDodavatel[]
   prilohy       FlexiCenikPriloha[]
   stavHistorie  FlexiCenikStavHistorie[]
+  shoptet       ShoptetProductSettings?
 
   // Ve Flexi je kod jednoznačný. Pokud firma používá "režim individuálních kódů
   // ceníkových položek", tento unikátní index odstraň.
@@ -517,4 +518,28 @@ model FlexiSyncState {
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("flexi_sync_state")
+}
+
+// ---------------------------------------------------------------------------
+// Výstup do Shoptetu (nastavení v dashboardu, ne zrcadlo)
+// ---------------------------------------------------------------------------
+
+/// Per product: what the dashboard sends to Shoptet. Written by people on the
+/// product detail (/products/[id]); unlike flexi_* it is not a mirror.
+model ShoptetProductSettings {
+  cenikId       String   @id @map("cenik_id") @db.Uuid
+  /// Own values that replace Flexi's in the Shoptet output, by field:
+  /// { title?, priceGross?, stock?, category? } (validated by parseShoptetOverrides).
+  overrides     Json     @default("{}")
+  /// Send the stock level automatically (available − safety buffer).
+  stockAutoSync Boolean  @default(true) @map("stock_auto_sync")
+  /// Pieces kept back from the e-shop.
+  safetyBuffer  Decimal  @default(0) @map("safety_buffer") @db.Decimal(18, 6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Neon Auth user id of the last editor.
+  updatedBy     String?  @map("updated_by")
+
+  cenik FlexiCenik @relation(fields: [cenikId], references: [id], onDelete: Cascade)
+
+  @@map("shoptet_product_settings")
 }

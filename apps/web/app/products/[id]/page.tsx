@@ -1,21 +1,142 @@
-import { getProductDetail, type ProductDetail } from '@repo/core-db';
+import {
+  getProductDetail,
+  getRecentFlexiSyncRuns,
+  getShoptetSettings,
+  listProductGroups,
+  DEFAULT_SHOPTET_SETTINGS,
+  stockStatus,
+  type Locale,
+  type ProductDetail,
+} from '@repo/core-db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { formatters, type Formatters } from '../../dashboard/format';
-import { fill, type Dictionary } from '../../../lib/i18n';
+import { fill, intlLocale, type Dictionary } from '../../../lib/i18n';
 import { getI18n } from '../../../lib/locale';
-import styles from '../products.module.css';
+import products from '../products.module.css';
 import d from './detail.module.css';
+import {
+  ExportToggle,
+  HeaderActions,
+  MappingHeadActions,
+  MappingTable,
+  ProductEditor,
+  PublishedLine,
+  StatusBar,
+  StockRules,
+  type EditorData,
+} from './Editor';
+import { SyncLog, type SyncLogRow } from './SyncLog';
 
 // Reads the Flexi mirror on every request (frame and session: ../layout.tsx).
 export const dynamic = 'force-dynamic';
 
 type T = Dictionary['products']['detail'];
+type Num = { toString(): string } | null;
 
-const dec = (v: { toString(): string } | null) => (v === null ? null : v.toString());
+const num = (v: Num) => (v === null ? null : Number(v.toString()));
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+/** A successful sync younger than this counts as "active". */
+const LIVE_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+interface SyncInfo {
+  /** Latest run, with its time as "5 min ago". */
+  last: {
+    status: string;
+    at: Date;
+    ago: string;
+    time: string;
+    live: boolean;
+  } | null;
+  rows: SyncLogRow[];
+}
+
+/** "před 5 minutami" / "5 minutes ago". */
+function relative(at: Date, now: number, locale: Locale): string {
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), {
+    numeric: 'auto',
+  });
+  const s = Math.round((at.getTime() - now) / 1000);
+  const abs = Math.abs(s);
+  if (abs < 60) return rtf.format(s, 'second');
+  if (abs < 3600) return rtf.format(Math.round(s / 60), 'minute');
+  if (abs < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+  return rtf.format(Math.round(s / 86400), 'day');
+}
+
+/** Sync runs for the header badge and the log card (time maths outside render). */
+async function loadSync(
+  locale: Locale,
+  t: T,
+  f: Formatters,
+): Promise<SyncInfo> {
+  const runs = await getRecentFlexiSyncRuns(6).catch(() => []);
+  const now = Date.now();
+  const time = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Prague',
+  });
+  const first = runs[0];
+  return {
+    last: first
+      ? (() => {
+          const at = first.finishedAt ?? first.startedAt;
+          return {
+            status: first.status,
+            at,
+            ago: relative(at, now, locale),
+            // Design: "14:30:05 (4m ago)".
+            time: new Intl.DateTimeFormat(intlLocale(locale), {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              timeZone: 'Europe/Prague',
+            }).format(at),
+            live:
+              first.status === 'success' && now - at.getTime() < LIVE_WINDOW_MS,
+          };
+        })()
+      : null,
+    rows: runs.map((r) => {
+      const counts = (r.counts ?? {}) as {
+        evidences?: Record<string, { written?: number; fetched?: number }>;
+      };
+      const ev = counts.evidences ?? {};
+      const status = (
+        r.status === 'success' || r.status === 'failed' ? r.status : 'running'
+      ) as SyncLogRow['status'];
+      return {
+        id: r.id,
+        time: time.format(r.startedAt),
+        status,
+        statusLabel:
+          status === 'success'
+            ? t.statusOk
+            : status === 'failed'
+              ? t.statusFailed
+              : t.statusRunning,
+        trigger: (t.triggers as Record<string, string>)[r.trigger] ?? r.trigger,
+        text:
+          r.status === 'failed' && r.error
+            ? r.error
+            : fill(t.runSummary, {
+                cenik: f.whole(ev.cenik?.written ?? 0),
+                karty: f.whole(ev['skladova-karta']?.written ?? 0),
+              }),
+      };
+    }),
+  };
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const { locale, t } = await getI18n();
   const f = formatters(locale);
@@ -25,258 +146,445 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   try {
     product = await getProductDetail(id);
   } catch (e) {
-    console.error('products/[id]: loading failed', e instanceof Error ? e.message : e);
+    console.error(
+      'products/[id]: loading failed',
+      e instanceof Error ? e.message : e,
+    );
     return (
-      <div className={styles.body}>
-        <BackLink t={td} />
-        <p className={styles.message} role="alert">
-          {td.loadError}
-        </p>
-      </div>
+      <>
+        <TopBar t={td} />
+        <div className={d.page}>
+          <p className={d.message} role="alert">
+            {td.loadError}
+          </p>
+        </div>
+      </>
     );
   }
   if (!product || product.deletedAt) notFound();
   const p = product;
+  const [sync, shoptet, groups] = await Promise.all([
+    loadSync(locale, td, f),
+    getShoptetSettings(p.id).catch(() => DEFAULT_SHOPTET_SETTINGS),
+    listProductGroups().catch(() => []),
+  ]);
+
   const unit = p.mj1?.kod ?? '';
-  const qty = (v: { toString(): string }) => `${f.qty(v.toString())}${unit ? ` ${unit}` : ''}`;
+  const qty = (v: Num) =>
+    `${f.qty(v?.toString() ?? '0')}${unit ? ` ${unit}` : ''}`;
+  const minStock = p.skladoveKarty.reduce((a, k) => a + Number(k.minMj), 0);
+  const status = stockStatus({
+    skladove: p.skladove,
+    stock: Number(p.sumStavMj),
+    minStock,
+    settings: { lowStockMode: 'flexiMin', lowStockThreshold: 5 },
+  });
+  const supplier = p.dodavatele.find((s) => s.primarni) ?? p.dodavatele[0];
+  const group = p.skupinaZbozi
+    ? (p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod)
+    : null;
+
+  // Pricing & margin (design card 1), from Flexi prices.
+  const purchase = num(p.nakupCena);
+  const net = num(p.cenaZaklBezDph);
+  const gross = num(p.cenaZaklVcDph);
+  const vatRate = num(p.szbDph);
+  const vat = net !== null && gross !== null ? gross - net : null;
+  const profit = purchase && net !== null ? net - purchase : null;
+  const margin = profit !== null && net ? (profit / net) * 100 : null;
+
+  const syncBadge = !sync.last
+    ? { cls: d.badgeIdle, text: td.notSynced.toUpperCase() }
+    : sync.last.status === 'failed'
+      ? { cls: d.badgeDanger, text: td.syncFailed.toUpperCase() }
+      : sync.last.live
+        ? {
+            cls: d.badgeLive,
+            text: fill(td.liveSync, { ago: sync.last.ago }).toUpperCase(),
+          }
+        : {
+            cls: d.badgeIdle,
+            text: fill(td.staleSync, { ago: sync.last.ago }).toUpperCase(),
+          };
+
+  // Plain decimal strings for the inputs ("789.000000" → "789").
+  const plain = (v: Num) => (v === null ? '' : String(Number(v.toString())));
+  const editor: EditorData = {
+    cenikId: p.id,
+    kod: p.kod,
+    locale,
+    flexi: {
+      nazev: p.nazev,
+      nakupCena: plain(p.nakupCena),
+      cenaZakl: plain(p.cenaZakl),
+      typSazbyDph: p.typSazbyDph ?? 'dphZakl',
+      skupinaKod: p.skupinaZbozi?.kod ?? '',
+      exportNaEshop: p.exportNaEshop,
+    },
+    typCenyDph: p.typCenyDph === 'sDph' ? 'sDph' : 'bezDph',
+    szbDph: vatRate,
+    priceNet: net === null ? null : String(net),
+    priceGross: gross === null ? null : String(gross),
+    stock: p.sumStavMj.toString(),
+    available: p.sumDostupMj.toString(),
+    unit,
+    skladove: p.skladove,
+    groups,
+    shoptet,
+  };
 
   return (
     <>
-      <header className={d.header}>
-        <BackLink t={td} />
-        <h1 className={styles.pageTitle}>{p.nazev}</h1>
-        <p className={d.meta}>
-          <span className={styles.code}>{p.kod}</span>
-          {p.eanKod && <span>EAN {p.eanKod}</span>}
-          {p.skupinaZbozi && <span>{p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod}</span>}
-        </p>
-      </header>
-
-      <div className={`${styles.body} ${d.grid}`}>
-        <section className={d.card} aria-labelledby="prices">
-          <h2 id="prices">{td.prices}</h2>
-          <dl className={d.list}>
-            <Row label={td.priceWithVat} value={f.czk(dec(p.cenaZaklVcDph))} strong />
-            <Row label={td.priceWithoutVat} value={f.czk(dec(p.cenaZaklBezDph))} />
-            <Row label={td.vatRate} value={p.szbDph === null ? '—' : f.share(Number(p.szbDph))} />
-            <Row label={td.purchasePrice} value={f.czk(dec(p.nakupCena))} />
-            {p.cenaBezna !== null && Number(p.cenaBezna) > 0 && (
-              <Row label={td.usualPrice} value={f.czk(dec(p.cenaBezna))} />
-            )}
-          </dl>
-        </section>
-
-        <section className={d.card} aria-labelledby="stock">
-          <h2 id="stock">{td.stock}</h2>
-          {p.skladove ? (
-            <>
-              <dl className={d.list}>
-                <Row label={td.stockTotal} value={qty(p.sumStavMj)} strong />
-                <Row label={td.stockAvailable} value={qty(p.sumDostupMj)} />
-                <Row label={td.stockReserved} value={qty(p.sumRezerMj)} />
-              </dl>
-              {p.skladoveKarty.length ? (
-                <table className={d.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">{td.warehouse}</th>
-                      <th scope="col" className={d.num}>
-                        {td.quantity}
-                      </th>
-                      <th scope="col" className={d.num}>
-                        {td.minimum}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.skladoveKarty.map((k) => (
-                      <tr key={k.id}>
-                        <td>{k.sklad.nazev ?? k.sklad.kod}</td>
-                        <td className={d.num}>{f.qty(k.stavMj.toString())}</td>
-                        <td className={d.num}>{Number(k.minMj) > 0 ? f.qty(k.minMj.toString()) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className={d.muted}>{td.noCards}</p>
-              )}
-            </>
-          ) : (
-            <p className={d.muted}>{t.products.status.service}</p>
-          )}
-        </section>
-
-        <section className={d.card} aria-labelledby="class">
-          <h2 id="class">{td.classification}</h2>
-          <dl className={d.list}>
-            <Row label={td.group} value={p.skupinaZbozi ? (p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod) : '—'} />
-            <Row label={td.stockType} value={(td.stockTypes as Record<string, string>)[p.typZasoby] ?? p.typZasoby} />
-            <Row label={td.unit} value={p.mj1 ? `${p.mj1.kod}${p.mj1.nazev ? ` (${p.mj1.nazev})` : ''}` : '—'} />
-            <Row label={td.eshop} value={p.exportNaEshop ? td.yes : td.no} />
-            <Row
-              label={td.warranty}
-              value={
-                p.zaruka
-                  ? `${p.zaruka} ${(td.warrantyUnits as Record<string, string>)[p.mjZaruky ?? ''] ?? ''}`.trim()
-                  : '—'
-              }
-            />
-            <Row label={td.deliveryTime} value={p.dodaciLhuta === null ? '—' : f.qty(p.dodaciLhuta.toString())} />
-            <Row
-              label={td.weight}
-              value={
-                p.hmotnostNetto && Number(p.hmotnostNetto) > 0
-                  ? `${f.qty(p.hmotnostNetto.toString())} ${p.mjHmotnosti?.kod ?? ''}`.trim()
-                  : '—'
-              }
-            />
-          </dl>
-          {p.stitky.length > 0 && (
-            <p className={d.tags} aria-label={td.labels}>
-              {p.stitky.map((s) => (
-                <span key={s} className={d.tag}>
-                  {s}
+      <TopBar t={td} />
+      <ProductEditor data={editor} t={td}>
+        <div className={d.page}>
+          {/* Page header & action bar */}
+          <header className={d.header}>
+            <div className={d.headerText}>
+              <p className={d.eyebrow}>
+                <span>{td.catalog}</span>
+                <span aria-hidden>•</span>
+                <span>{p.kod}</span>
+                <span aria-hidden>•</span>
+                <span>
+                  {sync.last?.status === 'success' ? td.synced : td.notSynced}
                 </span>
-              ))}
-            </p>
-          )}
-        </section>
+              </p>
+              <h1 className={d.title}>{p.nazev}</h1>
+              <p className={d.badges}>
+                {p.eanKod && (
+                  <span className={d.badgeNeutral}>EAN: {p.eanKod}</span>
+                )}
+                <span className={d.badgeAccent}>
+                  {td.code.toUpperCase()}: {p.kod}
+                </span>
+                <span className={`${d.badgeStatus} ${syncBadge.cls}`}>
+                  {syncBadge.text}
+                </span>
+              </p>
+            </div>
+            <HeaderActions />
+          </header>
+          <StatusBar />
 
-        {(p.kratkyPopis || p.popis) && (
-          <section className={`${d.card} ${d.wide}`} aria-labelledby="desc">
-            <h2 id="desc">{td.description}</h2>
-            {p.kratkyPopis && <p className={d.text}>{p.kratkyPopis}</p>}
-            {p.popis && <p className={d.text}>{p.popis}</p>}
-          </section>
-        )}
-
-        {p.atributy.length > 0 && (
-          <section className={d.card} aria-labelledby="attrs">
-            <h2 id="attrs">{td.attributes}</h2>
-            <dl className={d.list}>
-              {p.atributy.map((a) => (
-                <Row key={a.id} label={a.typAtributu.nazev ?? a.typAtributu.kod} value={a.hodnota ?? '—'} />
-              ))}
-            </dl>
-          </section>
-        )}
-
-        {p.odberatele.length > 0 && (
-          <PriceTable
-            id="customer-prices"
-            title={td.customerPrices}
-            t={td}
-            f={f}
-            rows={p.odberatele.map((o) => ({
-              id: o.id,
-              company: o.firma?.nazev ?? o.firma?.kod ?? '—',
-              currency: o.mena,
-              price: dec(o.prodejCena),
-            }))}
-          />
-        )}
-
-        {p.dodavatele.length > 0 && (
-          <PriceTable
-            id="supplier-prices"
-            title={td.supplierPrices}
-            t={td}
-            f={f}
-            rows={p.dodavatele.map((o) => ({
-              id: o.id,
-              company: `${o.firma?.nazev ?? o.firma?.kod ?? '—'}${o.primarni ? ` (${td.primary})` : ''}`,
-              currency: o.mena,
-              price: dec(o.nakupCena),
-            }))}
-          />
-        )}
-
-        {p.prilohy.length > 0 && (
-          <section className={d.card} aria-labelledby="files">
-            <h2 id="files">{td.attachments}</h2>
-            <ul className={d.files}>
-              {p.prilohy.map((a) => (
-                <li key={a.id}>
-                  <span>{a.nazevSouboru ?? a.odkaz ?? '—'}</span>
-                  <span className={d.muted}>
-                    {a.hlavni ? `${td.mainAttachment} · ` : ''}
-                    {a.dataSize ? `${f.qty(String(Math.round(a.dataSize / 1024)))} kB` : (a.contentType ?? '')}
+          {/* 1. Product & channel header card */}
+          <section
+            className={`${d.card} ${d.snapshotCard}`}
+            aria-labelledby="snapshot"
+          >
+            <span className={d.glow} aria-hidden />
+            <div className={d.snapshot}>
+              <div className={d.thumb} aria-hidden>
+                <span className={d.thumbCode}>{p.kod}</span>
+              </div>
+              <div className={d.snapshotText}>
+                <h2 id="snapshot" className={d.snapshotName}>
+                  {p.nazev}
+                </h2>
+                <p className={d.snapshotMeta}>
+                  <span>
+                    {td.supplier}:{' '}
+                    {supplier?.firma?.nazev ??
+                      supplier?.firma?.kod ??
+                      td.noSupplier}
                   </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                  <span aria-hidden>•</span>
+                  <span>
+                    {td.group}: <strong>{group ?? td.noGroup}</strong>
+                  </span>
+                  <span aria-hidden>•</span>
+                  <span>
+                    {td.flow}: {td.flowValue}
+                  </span>
+                </p>
+              </div>
+            </div>
 
-        <p className={`${d.source} ${d.wide}`}>
-          {fill(td.source, {
-            id: p.flexiId,
-            changed: f.dateTime(p.lastUpdate),
-            synced: f.dateTime(p.syncedAt),
-          })}
-        </p>
-      </div>
+            <div className={d.connectors} aria-label={td.connectors}>
+              <Connector
+                title={td.feedTitle}
+                badge={{ text: td.notConnected, tone: 'idle' }}
+                rows={[
+                  [td.lastFetch, '—'],
+                  [td.volume, '—'],
+                ]}
+              />
+              <Connector
+                title={td.flexiTitle}
+                badge={{ text: td.restApi, tone: 'accent' }}
+                rows={[
+                  [
+                    td.lastSync,
+                    sync.last ? `${sync.last.time} (${sync.last.ago})` : '—',
+                  ],
+                  [td.direction, td.directionValue],
+                ]}
+                active
+              />
+              <Connector
+                title={td.shoptetTitle}
+                badge={{ text: td.notConnected, tone: 'idle' }}
+                rows={[
+                  [td.lastPush, '—'],
+                  [td.eshopExport, <ExportToggle key="export" />],
+                ]}
+              />
+            </div>
+          </section>
+
+          {/* 2. Field mapping & data flow table */}
+          <section
+            className={`${d.card} ${d.mappingCard}`}
+            aria-labelledby="mapping"
+          >
+            <div className={d.mappingHead}>
+              <div className={d.mappingTitle}>
+                <h2 id="mapping">{td.mappingTitle}</h2>
+                <span className={d.badgeNeutral}>
+                  {fill(td.attributesCount, { n: 7 })}
+                </span>
+              </div>
+              <MappingHeadActions />
+            </div>
+            <MappingTable />
+          </section>
+
+          {/* 3. Bottom command deck */}
+          <div className={d.deck}>
+            <section className={d.card} aria-labelledby="pricing">
+              <CardHead
+                id="pricing"
+                title={td.pricingTitle}
+                subtitle={td.pricingSubtitle}
+              />
+              <dl className={d.lines}>
+                <Line
+                  label={td.purchasePrice}
+                  value={f.czk(purchase === null ? null : String(purchase))}
+                />
+                <Line
+                  label={td.priceNet}
+                  value={f.czk(net === null ? null : String(net))}
+                />
+                <Line
+                  label={td.priceGross}
+                  value={f.czk(gross === null ? null : String(gross))}
+                  strong
+                />
+                <Line
+                  label={fill(td.vatAmount, {
+                    rate: vatRate === null ? '—' : f.share(vatRate),
+                  })}
+                  value={f.czk(vat === null ? null : vat.toFixed(2))}
+                />
+              </dl>
+              {margin !== null && profit !== null ? (
+                <div className={d.marginBox}>
+                  <div>
+                    <span className={d.marginLabel}>{td.grossMargin}</span>
+                    <span
+                      className={profit >= 0 ? d.marginValue : d.marginValueNeg}
+                    >
+                      {f.pct(Math.round(margin * 10) / 10)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={d.marginLabel}>{td.unitProfit}</span>
+                    <span
+                      className={profit >= 0 ? d.marginValue : d.marginValueNeg}
+                    >
+                      {profit > 0 ? '+' : ''}
+                      {f.czk(profit.toFixed(2))}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className={d.note}>{td.noPurchase}</p>
+              )}
+            </section>
+
+            <section className={d.card} aria-labelledby="stock">
+              <CardHead
+                id="stock"
+                title={td.stockTitle}
+                subtitle={td.stockSubtitle}
+                badge={
+                  <span
+                    className={`${products.status} ${products[STATUS_CLASS[status]]}`}
+                    title={`${td.minimum} ${minStock > 0 ? qty(String(minStock)) : '—'}`}
+                  >
+                    {t.products.status[status].toUpperCase()}
+                  </span>
+                }
+              />
+              {p.skladove ? (
+                <dl className={d.lines}>
+                  {p.skladoveKarty.length === 0 && (
+                    <p className={d.note}>{td.noCards}</p>
+                  )}
+                  {p.skladoveKarty.slice(0, 3).map((k) => (
+                    <Line
+                      key={k.id}
+                      label={k.sklad.nazev ?? k.sklad.kod}
+                      value={qty(k.stavMj)}
+                    />
+                  ))}
+                  <Line label={td.reserved} value={`−${qty(p.sumRezerMj)}`} />
+                  <Line
+                    label={td.available}
+                    value={qty(p.sumDostupMj)}
+                    strong
+                  />
+                  <PublishedLine />
+                </dl>
+              ) : (
+                <p className={d.note}>{td.notStocked}</p>
+              )}
+              <StockRules />
+            </section>
+
+            <section className={d.card} aria-labelledby="log">
+              <CardHead
+                id="log"
+                title={td.logTitle}
+                subtitle={td.logSubtitle}
+                badge={
+                  <span className={d.badgeLiveSmall}>
+                    {td.logBadge.toUpperCase()}
+                  </span>
+                }
+              />
+              <SyncLog
+                rows={sync.rows.slice(0, 4)}
+                labels={{
+                  all: td.filterAll,
+                  ok: td.filterOk,
+                  failed: td.filterFailed,
+                  filter: td.filterLabel,
+                  empty: td.noRuns,
+                }}
+              />
+              <p className={d.logFooter}>
+                <span
+                  className={
+                    sync.last?.status === 'failed' ? d.dotDanger : d.dotLive
+                  }
+                  aria-hidden
+                />
+                {sync.last
+                  ? fill(td.logFooter, { ago: sync.last.ago })
+                  : td.logFooterNone}
+              </p>
+            </section>
+          </div>
+
+          <p className={d.source}>
+            {fill(td.source, {
+              id: p.flexiId,
+              changed: f.dateTime(p.lastUpdate),
+              synced: f.dateTime(p.syncedAt),
+            })}
+          </p>
+        </div>
+      </ProductEditor>
     </>
   );
 }
 
-function BackLink({ t }: { t: T }) {
-  return (
-    <Link href="/products" className={d.back}>
-      <span className={styles.chevronLeft} aria-hidden />
-      {t.back}
-    </Link>
-  );
-}
+const STATUS_CLASS = {
+  inStock: 'statusIn',
+  lowStock: 'statusLow',
+  outOfStock: 'statusOut',
+  service: 'statusService',
+} as const;
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+/** Design: "Top Admin Header" with the breadcrumb (64px, translucent, blurred). */
+function TopBar({ t }: { t: T }) {
   return (
-    <div className={d.row}>
-      <dt>{label}</dt>
-      <dd className={strong ? d.strong : undefined}>{value}</dd>
+    <div className={d.topBar}>
+      <nav aria-label={t.breadcrumbLabel} className={d.crumbs}>
+        <Link href="/">
+          <span className={d.iconHome} aria-hidden />
+          {t.breadcrumbHome}
+        </Link>
+        <span className={d.crumbSep} aria-hidden />
+        <Link href="/products">{t.breadcrumbProducts}</Link>
+        <span className={d.crumbSep} aria-hidden />
+        <span aria-current="page">{t.breadcrumbCurrent}</span>
+      </nav>
     </div>
   );
 }
 
-function PriceTable({
+function Connector({
+  title,
+  badge,
+  rows,
+  active,
+}: {
+  title: string;
+  badge: { text: string; tone: 'idle' | 'accent' };
+  rows: [string, React.ReactNode][];
+  active?: boolean;
+}) {
+  return (
+    <div className={`${d.connector} ${active ? d.connectorActive : ''}`}>
+      <div className={d.connectorHead}>
+        <span className={d.connectorTitle}>
+          <span className={active ? d.dotLive : d.dotIdle} aria-hidden />
+          {title}
+        </span>
+        <span className={badge.tone === 'accent' ? d.pillAccent : d.pillIdle}>
+          {badge.text}
+        </span>
+      </div>
+      <dl className={d.connectorRows}>
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function CardHead({
   id,
   title,
-  rows,
-  t,
-  f,
+  subtitle,
+  badge,
 }: {
   id: string;
   title: string;
-  rows: { id: string; company: string; currency: string | null; price: string | null }[];
-  t: T;
-  f: Formatters;
+  subtitle: string;
+  badge?: React.ReactNode;
 }) {
   return (
-    <section className={d.card} aria-labelledby={id}>
-      <h2 id={id}>{title}</h2>
-      <table className={d.table}>
-        <thead>
-          <tr>
-            <th scope="col">{t.company}</th>
-            <th scope="col">{t.currency}</th>
-            <th scope="col" className={d.num}>
-              {t.price}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td>{r.company}</td>
-              <td>{r.currency ?? 'CZK'}</td>
-              <td className={d.num}>
-                {r.price === null ? '—' : !r.currency || r.currency === 'CZK' ? f.czk(r.price) : `${f.qty(r.price)} ${r.currency}`}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+    <div className={d.cardHead}>
+      <div className={d.cardHeadRow}>
+        <h3 id={id}>{title}</h3>
+        {badge}
+      </div>
+      <p>{subtitle}</p>
+    </div>
+  );
+}
+
+function Line({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className={d.line}>
+      <dt>{label}</dt>
+      <dd className={strong ? d.lineStrong : undefined}>{value}</dd>
+    </div>
   );
 }

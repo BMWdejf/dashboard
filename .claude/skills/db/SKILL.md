@@ -93,6 +93,15 @@ rollback or backfill plan in the PR.
   1.4·10¹¹ with 6 decimals.
 - Queries for the Products page: `src/products.ts` (pure parts in `product-logic.ts`).
 
+## Shoptet output settings
+
+- `shoptet_product_settings` (one row per `flexi_cenik`, cascade): per-field
+  overrides of what goes to Shoptet (`overrides` jsonb: `title`, `priceGross`,
+  `stock`, `category`), `stock_auto_sync`, `safety_buffer`. Written by the product
+  detail page; validation and the computed output in `src/shoptet-logic.ts`
+  (`@repo/core-db/shoptet`, safe for client components), queries in
+  `src/shoptet-settings.ts`.
+
 ## Tables planned for the integrations
 
 - `WebhookEvent`: `(source, eventInstance, event)` unique, for idempotency.
