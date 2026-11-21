@@ -3,6 +3,10 @@
   "globalDependencies": [
     "**/.env.*local"
   ],
+  "globalPassThroughEnv": [
+    "NEON_BRANCH_ID",
+    "NEON_AUTH_JWKS_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": [
