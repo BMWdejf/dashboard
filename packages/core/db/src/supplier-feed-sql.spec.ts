@@ -2,7 +2,12 @@ import { describe, expect, it } from '@jest/globals';
 
 import type { SupplierFeedItemRow } from '@repo/core-sync';
 
-import { supplierItemChunks, UPSERT_SUPPLIER_ITEMS_SQL } from './supplier-feed-sql';
+import {
+  CLAIM_SUPPLIER_FEED_SQL,
+  MARK_REMOVED_SUPPLIER_ITEMS_SQL,
+  supplierItemChunks,
+  UPSERT_SUPPLIER_ITEMS_SQL,
+} from './supplier-feed-sql';
 
 const row = (kod: string): SupplierFeedItemRow => ({
   kod,
@@ -48,5 +53,14 @@ describe('supplier feed SQL', () => {
     expect(update).not.toContain('first_seen_at');
     expect(update).not.toContain('cenik_id');
     expect(update).not.toContain('kod = EXCLUDED.kod');
+  });
+
+  // Untyped parameters made Postgres read `$2 - make_interval(...)` as
+  // interval - interval, so every claim failed (42883) and no feed imported.
+  it('types every timestamp parameter', () => {
+    expect(CLAIM_SUPPLIER_FEED_SQL).toContain('$2::timestamptz - make_interval(mins => $3::int)');
+    expect(CLAIM_SUPPLIER_FEED_SQL).not.toMatch(/\$2(?!::)/);
+    expect(UPSERT_SUPPLIER_ITEMS_SQL).not.toMatch(/\$3(?!::)/);
+    expect(MARK_REMOVED_SUPPLIER_ITEMS_SQL).not.toMatch(/\$2(?!::)/);
   });
 });
