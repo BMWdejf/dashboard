@@ -90,6 +90,10 @@ Then add `NEON_AUTH_COOKIE_SECRET` (`openssl rand -base64 32`) to
 [--pooled]`) to the root `.env.local`. The branch has several databases, so
 `neon env pull` can't pick the database itself.
 
+For the web → API calls (/integrations/new checks, product edits, sync), add
+the same `SYNC_API_TOKEN` (`openssl rand -hex 32`) to both the root
+`.env.local` (read by `pnpm --filter api dev`) and `apps/web/.env.local`.
+
 ## Dev servers
 
 - Everything: `pnpm dev` (web on 3001, API on 3000).
