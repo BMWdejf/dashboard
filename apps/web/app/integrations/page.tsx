@@ -143,13 +143,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           <p className={styles.subtitle}>{ti.subtitle}</p>
         </div>
         <div className={styles.topActions}>
-          <button type="button" className={styles.secondary} aria-disabled="true" title={ti.addDisabled} aria-describedby="add-hint">
+          <Link href="/integrations/new" className={styles.secondary}>
             <span className={styles.plusIcon} aria-hidden />
             {ti.add}
-          </button>
-          <span id="add-hint" className={dash.visuallyHidden}>
-            {ti.addDisabled}
-          </span>
+          </Link>
           <div className={styles.syncRow}>
             <SyncAllButton labels={{ syncAll: ti.syncAll, syncAllHint: ti.syncAllHint, syncing: ti.syncing }} />
           </div>
