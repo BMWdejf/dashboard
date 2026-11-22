@@ -80,16 +80,13 @@ interface FeedCard {
  * supplier_feed_item.cenik_id), its last import and when the product was last
  * in it. Reads the clock, so it runs outside render.
  */
-function feedCard(p: ProductDetail, locale: Locale, t: T, f: Formatters): FeedCard {
+function feedCard(p: ProductDetail, locale: Locale, t: T): FeedCard {
   const [item, ...others] = p.supplierItems;
   if (!item) {
     return {
       badge: { text: t.notConnected, tone: 'idle' },
       active: false,
-      rows: [
-        [t.lastFetch, '—'],
-        [t.volume, '—'],
-      ],
+      rows: [[t.lastFetch, '—']],
     };
   }
   const now = Date.now();
@@ -108,19 +105,6 @@ function feedCard(p: ProductDetail, locale: Locale, t: T, f: Formatters): FeedCa
       : feed.lastImportStatus === 'running'
         ? ` · ${t.feedImportRunning}`
         : '';
-  const stats = (feed.lastImportStats ?? {}) as { items?: number; bytes?: number };
-  const size =
-    typeof stats.bytes === 'number'
-      ? new Intl.NumberFormat(intlLocale(locale), { style: 'unit', unit: 'megabyte', maximumFractionDigits: 1 }).format(
-          stats.bytes / 1_000_000,
-        )
-      : null;
-  const volume =
-    typeof stats.items === 'number'
-      ? size
-        ? fill(t.feedVolume, { items: f.whole(stats.items), size })
-        : f.whole(stats.items)
-      : '—';
   const removed = item.removedAt !== null;
   return {
     badge: removed ? { text: t.feedRemoved, tone: 'idle' } : { text: t.feedConnected, tone: 'accent' },
@@ -135,10 +119,8 @@ function feedCard(p: ProductDetail, locale: Locale, t: T, f: Formatters): FeedCa
           {others.length > 0 && <> {fill(t.feedMore, { n: others.length })}</>}
         </>,
       ],
-      [t.feedSupplierKod, item.kod],
       [t.feedLastImport, feed.lastImportAt ? `${when(feed.lastImportAt)}${importStatus}` : '—'],
       [t.feedItemSeen, removed ? fill(t.feedRemovedAt, { when: when(item.removedAt!) }) : when(item.lastSeenAt)],
-      [t.volume, volume],
     ],
   };
 }
@@ -288,7 +270,7 @@ export default async function ProductDetailPage({
   });
   const image = mainImage(p.prilohy);
   const supplier = p.dodavatele.find((s) => s.primarni) ?? p.dodavatele[0];
-  const feed = feedCard(p, locale, td, f);
+  const feed = feedCard(p, locale, td);
   const group = p.skupinaZbozi
     ? (p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod)
     : null;
