@@ -1,8 +1,16 @@
 import { z } from 'zod';
 
-import { DETAIL } from './evidences';
 import { mapRecords, type FlexiRecord, type UcetniObdobiRow } from './map';
-import { currentPeriod, pragueDate, type MirrorFlexiReader, type MirrorStore } from './run';
+import { DETAIL, type MirrorEvidence } from './evidences';
+import {
+  currentPeriod,
+  pragueDate,
+  safeError,
+  type MirrorFlexiReader,
+  type MirrorStore,
+  type SyncCounts,
+  type SyncTrigger,
+} from './run';
 
 /**
  * Editing a product from the dashboard (product detail → "Uložit a odeslat"):
@@ -37,51 +45,111 @@ export const productChangesSchema = z
 export type ProductChanges = z.infer<typeof productChangesSchema>;
 
 /** Changes → the record for PUT /c/{firma}/cenik.json (identified by Flexi id). */
-export function buildCenikUpdate(flexiId: number, changes: ProductChanges): Record<string, string> {
+export function buildCenikUpdate(
+  flexiId: number,
+  changes: ProductChanges,
+): Record<string, string> {
   const r: Record<string, string> = { id: String(flexiId) };
   if (changes.nazev !== undefined) r.nazev = changes.nazev;
   if (changes.nakupCena !== undefined) r.nakupCena = changes.nakupCena;
   if (changes.cenaZakl !== undefined) r.cenaZakl = changes.cenaZakl;
-  if (changes.typSazbyDph !== undefined) r.typSzbDphK = `typSzbDph.${changes.typSazbyDph}`;
-  if (changes.skupinaKod !== undefined) r.skupZboz = changes.skupinaKod === null ? '' : `code:${changes.skupinaKod}`;
-  if (changes.exportNaEshop !== undefined) r.exportNaEshop = String(changes.exportNaEshop);
+  if (changes.typSazbyDph !== undefined)
+    r.typSzbDphK = `typSzbDph.${changes.typSazbyDph}`;
+  if (changes.skupinaKod !== undefined)
+    r.skupZboz =
+      changes.skupinaKod === null ? '' : `code:${changes.skupinaKod}`;
+  if (changes.exportNaEshop !== undefined)
+    r.exportNaEshop = String(changes.exportNaEshop);
   return r;
 }
 
+/** Per-product child evidences, read again with the product. */
+const CHILDREN = ['atribut', 'odberatel', 'dodavatel', 'priloha'] as const;
+
 /**
- * Reads one product (and its stock cards of the current period) from Flexi
- * into the mirror, then recomputes stock totals. For "Synchronizovat teď" and
- * after a real write.
+ * Reads one product, its attributes, prices, attachments and its stock cards
+ * of the current period from Flexi into the mirror, then recomputes stock
+ * totals. Recorded as a sync run, so the product page shows when it ran. For
+ * "Synchronizovat teď" and after a real write.
  */
 export async function syncOneProduct(opts: {
   flexi: MirrorFlexiReader;
   store: MirrorStore;
   flexiId: number;
+  trigger?: SyncTrigger;
   now?: () => Date;
-}): Promise<{ found: boolean; cards: number }> {
+}): Promise<{ found: boolean; cards: number; runId: string }> {
   const { flexi, store, flexiId } = opts;
   const now = opts.now ?? (() => new Date());
+  const counts: SyncCounts = { evidences: {}, errors: [], product: flexiId };
+  const runId = await store.startRun(opts.trigger ?? 'api');
 
-  const { rows } = await flexi.list<FlexiRecord>('cenik', { filter: `id = ${flexiId}`, detail: DETAIL.cenik });
-  const mapped = mapRecords('cenik', rows);
-  if (mapped.errors.length) throw mapped.errors[0]!;
-  if (!mapped.rows.length) return { found: false, cards: 0 };
-  await store.upsert('cenik', mapped.rows);
+  /** Reads `evidence` with `filter`, writes what maps and counts it. */
+  async function read<E extends MirrorEvidence>(evidence: E, filter: string) {
+    const { rows } = await flexi.list<FlexiRecord>(evidence, {
+      filter,
+      detail: DETAIL[evidence],
+      limit: 0,
+    });
+    const mapped = mapRecords(evidence, rows);
+    const w = mapped.rows.length
+      ? await store.upsert(evidence, mapped.rows)
+      : { written: 0, skipped: 0 };
+    counts.evidences[evidence] = {
+      fetched: rows.length,
+      written: w.written,
+      skipped: w.skipped,
+      invalid: mapped.errors.length,
+      deleted: 0,
+    };
+    counts.errors.push(...mapped.errors.slice(0, 5).map((e) => e.message));
+    return mapped;
+  }
 
-  const periods = mapRecords(
-    'ucetni-obdobi',
-    (await flexi.list<FlexiRecord>('ucetni-obdobi', { detail: DETAIL['ucetni-obdobi'], limit: 0 })).rows,
-  ).rows as UcetniObdobiRow[];
-  const period = currentPeriod(periods, pragueDate(now()));
-  if (!period) return { found: true, cards: 0 };
+  try {
+    const product = await read('cenik', `id = ${flexiId}`);
+    if (product.errors.length) throw product.errors[0]!;
+    if (!product.rows.length) {
+      await store.finishRun(runId, {
+        status: 'failed',
+        counts,
+        error: `Flexi has no product ${flexiId}.`,
+      });
+      return { found: false, cards: 0, runId };
+    }
+    for (const evidence of CHILDREN) await read(evidence, `cenik = ${flexiId}`);
 
-  const cards = await flexi.list<FlexiRecord>('skladova-karta', {
-    filter: `cenik = ${flexiId} and ucetObdobi = 'code:${period.kod}'`,
-    detail: DETAIL['skladova-karta'],
-    limit: 0,
-  });
-  const mappedCards = mapRecords('skladova-karta', cards.rows);
-  if (mappedCards.rows.length) await store.upsert('skladova-karta', mappedCards.rows);
-  await store.refreshStock(period.flexiId, now());
-  return { found: true, cards: mappedCards.rows.length };
+    const periods = mapRecords(
+      'ucetni-obdobi',
+      (
+        await flexi.list<FlexiRecord>('ucetni-obdobi', {
+          detail: DETAIL['ucetni-obdobi'],
+          limit: 0,
+        })
+      ).rows,
+    ).rows as UcetniObdobiRow[];
+    const period = currentPeriod(periods, pragueDate(now()));
+    let cards = 0;
+    if (period) {
+      counts.period = period.kod;
+      cards = (
+        await read(
+          'skladova-karta',
+          `cenik = ${flexiId} and ucetObdobi = 'code:${period.kod}'`,
+        )
+      ).rows.length;
+      counts.stockHistoryRows = await store.refreshStock(period.flexiId, now());
+    } else {
+      counts.errors.push(
+        `No accounting period covers ${pragueDate(now())}; stock cards skipped.`,
+      );
+    }
+    await store.finishRun(runId, { status: 'success', counts });
+    return { found: true, cards, runId };
+  } catch (e) {
+    await store
+      .finishRun(runId, { status: 'failed', counts, error: safeError(e) })
+      .catch(() => {});
+    throw e;
+  }
 }

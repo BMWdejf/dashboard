@@ -94,7 +94,11 @@ An evidence's fields are listed by the server itself at
 - The API's writer follows `FLEXI_DRY_RUN` (default `true`): the UI then says the
   change was only validated. With it `false`, the API re-reads that one product
   into the mirror (`syncOneProduct`); `POST /products/:flexiId/sync` does the same
-  on demand. Flexi 4xx errors come back as 422 with Flexi's messages.
+  on demand. It reads the product, its attributes, prices, attachments and
+  current stock cards, and is recorded in `flexi_sync_run` (trigger `api`,
+  `counts.product` = Flexi id), so the product page's "last sync" moves.
+  `last_update` is Flexi's own change time: a sync never changes it, `synced_at`
+  does. Flexi 4xx errors come back as 422 with Flexi's messages.
 
 ## Evidences we use
 

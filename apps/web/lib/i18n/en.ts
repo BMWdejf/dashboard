@@ -183,8 +183,6 @@ export const en: Dictionary = {
       breadcrumbProducts: 'Products',
       breadcrumbCurrent: 'Product detail',
       breadcrumbLabel: 'Breadcrumb',
-      catalog: 'Catalog',
-      synced: 'Synchronized',
       notSynced: 'Not synchronized',
       syncFailed: 'Sync failed',
       code: 'Code',

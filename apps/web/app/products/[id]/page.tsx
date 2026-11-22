@@ -65,6 +65,23 @@ function relative(at: Date, now: number, locale: Locale): string {
   return rtf.format(Math.round(s / 86400), 'day');
 }
 
+const IMAGE_FILE = /\.(jpe?g|png|gif|webp|avif|svg)(\?|$)/i;
+
+/**
+ * The product's picture: its main Flexi attachment (else the first image),
+ * from our stored copy or the attachment's link. Only https URLs.
+ */
+function mainImage(prilohy: ProductDetail['prilohy']): string | null {
+  const src = (a: ProductDetail['prilohy'][number]) => a.url ?? a.odkaz;
+  const isImage = (a: ProductDetail['prilohy'][number]) =>
+    !!src(a) &&
+    (a.contentType?.startsWith('image/') || IMAGE_FILE.test(src(a) ?? ''));
+  const a =
+    prilohy.find((x) => x.hlavni && isImage(x)) ?? prilohy.find(isImage);
+  const url = a ? src(a) : null;
+  return url && url.startsWith('https://') ? url : null;
+}
+
 /** Sync runs for the header badge and the log card (time maths outside render). */
 async function loadSync(
   locale: Locale,
@@ -179,6 +196,7 @@ export default async function ProductDetailPage({
     minStock,
     settings: { lowStockMode: 'flexiMin', lowStockThreshold: 5 },
   });
+  const image = mainImage(p.prilohy);
   const supplier = p.dodavatele.find((s) => s.primarni) ?? p.dodavatele[0];
   const group = p.skupinaZbozi
     ? (p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod)
@@ -241,15 +259,6 @@ export default async function ProductDetailPage({
           {/* Page header & action bar */}
           <header className={d.header}>
             <div className={d.headerText}>
-              <p className={d.eyebrow}>
-                <span>{td.catalog}</span>
-                <span aria-hidden>•</span>
-                <span>{p.kod}</span>
-                <span aria-hidden>•</span>
-                <span>
-                  {sync.last?.status === 'success' ? td.synced : td.notSynced}
-                </span>
-              </p>
               <h1 className={d.title}>{p.nazev}</h1>
               <p className={d.badges}>
                 {p.eanKod && (
@@ -275,7 +284,20 @@ export default async function ProductDetailPage({
             <span className={d.glow} aria-hidden />
             <div className={d.snapshot}>
               <div className={d.thumb} aria-hidden>
-                <span className={d.thumbCode}>{p.kod}</span>
+                {image ? (
+                  // Flexi links to images on other hosts (Shoptet CDN…); next/image would
+                  // need every host allow-listed.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className={d.thumbImg}
+                    src={image}
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className={d.thumbCode}>{p.kod}</span>
+                )}
               </div>
               <div className={d.snapshotText}>
                 <h2 id="snapshot" className={d.snapshotName}>
