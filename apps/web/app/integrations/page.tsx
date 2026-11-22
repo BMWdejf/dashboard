@@ -38,6 +38,8 @@ interface Row {
   /** Why the integration doesn't work yet (tooltip on the status). */
   note?: string;
   href?: string;
+  /** Label of the row's link (href). */
+  hrefLabel?: string;
 }
 
 /** "demo.flexibee.eu:5434/c/firma"; null when the env isn't set in the web app. */
@@ -113,6 +115,8 @@ function feedRows(feeds: SupplierFeedSummary[], t: T, codes: Record<string, stri
             ? ('failed' as const)
             : ('never' as const),
     note: f.lastImportStatus === 'failed' ? feedFailure(f.lastImportError, t, codes) : undefined,
+    href: `/integrations/feeds/${f.id}`,
+    hrefLabel: t.openFeed,
   }));
 }
 
@@ -151,6 +155,7 @@ function buildRows(
       heartbeat: last ? { ago: relative(last.at, now, locale), time: time.format(last.at) } : null,
       status: flexiStatus,
       href: '/products',
+      hrefLabel: t.openProducts,
     },
     {
       key: 'shoptet',
@@ -450,7 +455,7 @@ function IntegrationTable({ rows, t, f }: { rows: Row[]; t: T; f: Formatters }) 
               </td>
               <td className={styles.actionsCell}>
                 {r.href ? (
-                  <Link href={r.href} className={styles.iconButton} aria-label={`${t.openProducts}: ${r.name}`} title={t.openProducts}>
+                  <Link href={r.href} className={styles.iconButton} aria-label={`${r.hrefLabel}: ${r.name}`} title={r.hrefLabel}>
                     <span className={styles.arrowIcon} aria-hidden />
                   </Link>
                 ) : (

@@ -14,7 +14,9 @@ A Turborepo monorepo (pnpm workspaces):
   `FLEXI_CHECK_ALLOW_PRIVATE=true`), and `/supplier-feeds` (supplier XML feeds:
   mapping preview, save, import into `supplier_feed_item`; due feeds are imported
   every minute unless `SUPPLIER_FEED_SCHEDULER=false`, or via
-  `GET /supplier-feeds/cron`). Manual run:
+  `GET /supplier-feeds/cron`; items go to Flexi by hand from
+  `/integrations/feeds/[id]` via `/supplier-feeds/:id/flexi/{create,update}`,
+  dry-run unless `FLEXI_DRY_RUN=false`). Manual run:
   `pnpm --filter api sync:flexi [--full]`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).

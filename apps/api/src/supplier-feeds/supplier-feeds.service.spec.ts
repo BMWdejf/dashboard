@@ -8,6 +8,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import type { CheckDeps, SupplierFeedInput } from '@repo/core-sync';
 
 import { SyncTokenGuard } from '../flexi-sync/sync-token.guard';
+import { FeedFlexiService } from './feed-flexi.service';
 import { SupplierFeedsController } from './supplier-feeds.controller';
 import { SUPPLIER_FEEDS, SupplierFeedsService, type SupplierFeedRepo } from './supplier-feeds.service';
 
@@ -46,6 +47,7 @@ async function make(opts: { body?: string; status?: number; repo?: Partial<Suppl
     providers: [
       SupplierFeedsService,
       { provide: SUPPLIER_FEEDS, useValue: { deps, repo, scheduler: false } },
+      { provide: FeedFlexiService, useValue: {} },
     ],
   })
     .overrideGuard(SyncTokenGuard)

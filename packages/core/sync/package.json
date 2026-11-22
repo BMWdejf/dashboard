@@ -23,6 +23,10 @@
     "./feed-mapping": {
       "types": "./dist/supplier-feed/mapping.d.ts",
       "default": "./dist/supplier-feed/mapping.js"
+    },
+    "./feed-flexi": {
+      "types": "./dist/supplier-feed/to-flexi.d.ts",
+      "default": "./dist/supplier-feed/to-flexi.js"
     }
   },
   "dependencies": {

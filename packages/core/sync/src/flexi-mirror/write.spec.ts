@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
 import type { MirrorFlexiReader, MirrorStore } from './run';
-import { buildCenikUpdate, productChangesSchema, syncOneProduct } from './write';
+import { buildCenikUpdate, productChangesSchema, syncOneProduct, syncProductsByIds } from './write';
 
 describe('productChangesSchema', () => {
   it('accepts partial changes with decimal commas', () => {
@@ -82,5 +82,13 @@ describe('syncOneProduct', () => {
     const { flexi, store } = setup(false);
     await expect(syncOneProduct({ flexi, store, flexiId: 2, now: () => NOW })).resolves.toEqual({ found: false, cards: 0 });
     expect(store.upsert).not.toHaveBeenCalled();
+  });
+
+  it('reads several products in one filtered call, skipping duplicates', async () => {
+    const { flexi, store, list } = setup();
+    await expect(syncProductsByIds({ flexi, store, flexiIds: [2, 2, 3] })).resolves.toBe(1);
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list.mock.calls[0]?.[1]?.filter).toBe('id in (2,3)');
+    expect(store.upsert).toHaveBeenCalledTimes(1);
   });
 });
