@@ -106,7 +106,9 @@ the same `SYNC_API_TOKEN` (`openssl rand -hex 32`) to both the root
 - Everything: `pnpm dev` (web on 3001, API on 3000).
 - Web only, on a given port: `pnpm --filter web exec next dev --port <port>`
   (run `pnpm --filter @repo/api build` first if `packages/api` has no `dist`).
-- The API listens on port 3000 (hard-coded in `apps/api/src/main.ts`). The web
+- The API listens on `PORT` (`serverEnv`, default 3000). It is hosted on Render
+  as `dashboard-api` (`render.yaml`; secrets are set in the Render dashboard,
+  `FLEXI_DRY_RUN` stays `true` there). The web
   app doesn't call it; the dashboard reads `examples_data` from Neon directly.
 - `.env.local` never overrides variables already set in the shell. If your
   shell exports `DATABASE_URL` or `NEON_AUTH_*` for another project, unset

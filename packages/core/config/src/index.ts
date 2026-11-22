@@ -108,6 +108,12 @@ export const supplierFeedEnv = z.object({
 });
 export type SupplierFeedEnv = z.infer<typeof supplierFeedEnv>;
 
+/** HTTP server of apps/api. Hosts such as Render set PORT; locally it is 3000. */
+export const serverEnv = z.object({
+  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+});
+export type ServerEnv = z.infer<typeof serverEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),
