@@ -9,6 +9,9 @@ import { z } from 'zod';
  * - Its `kod` is suggested from the name and the supplier's code and can be
  *   edited before the write.
  * - The price is the feed's retail price incl. VAT (cenaZakl, typ ceny s DPH).
+ * - The feed's images go along as link attachments (`prilohy`, typ odkaz),
+ *   each with `ext:FEEDIMG:<item id>:<url hash>`, and only those the product
+ *   doesn't link yet.
  */
 
 /** Field limits from /c/{firma}/cenik/properties.json. */
@@ -16,6 +19,9 @@ export const FLEXI_CENIK_LIMITS = { kod: 64, nazev: 255, eanKod: 20 } as const;
 
 /** Items per create/update request (and per Flexi PUT, which is atomic). */
 export const FEED_FLEXI_MAX_ITEMS = 200;
+
+/** Images per product sent to Flexi (the first ones of the feed). */
+export const FEED_FLEXI_MAX_IMAGES = 10;
 
 /** Upper case, no diacritics, anything but letters and digits → "_". */
 export function kodPart(text: string): string {
@@ -71,6 +77,7 @@ export const FEED_SYNC_FIELDS = [
   'kratkyPopis',
   'dodaciLhuta',
   'hmotnost',
+  'obrazky',
 ] as const;
 export type FeedSyncField = (typeof FEED_SYNC_FIELDS)[number];
 
@@ -95,6 +102,8 @@ export interface FeedItemForFlexi {
   szbDph: string | null;
   dodaciLhuta: string | null;
   hmotnostNetto: string | null;
+  /** Image URLs, the main one first. */
+  obrazky: string[];
 }
 
 /** The paired product as mirrored in `flexi_cenik`. */
@@ -110,6 +119,10 @@ export interface CenikForFeed {
   typSazbyDph: string | null;
   dodaciLhuta: string | null;
   hmotnostNetto: string | null;
+  /** Links of the product's link attachments (`priloha.link`). */
+  odkazy: string[];
+  /** The product already has a main attachment (a link or an uploaded file). */
+  maHlavniPrilohu: boolean;
 }
 
 /** Why an item can't be written; shown translated in the web app. */
@@ -156,8 +169,78 @@ const ean = (s: string | null) => {
 };
 const nazev = (item: FeedItemForFlexi) => text(item.nazev)?.slice(0, FLEXI_CENIK_LIMITS.nazev) ?? null;
 
+/** The feed's usable image URLs (http/https), without repeats, at most FEED_FLEXI_MAX_IMAGES. */
+export function feedImages(item: FeedItemForFlexi): string[] {
+  const out: string[] = [];
+  for (const raw of item.obrazky) {
+    const u = raw.trim();
+    if (!/^https?:\/\/\S+$/i.test(u) || out.includes(u)) continue;
+    try {
+      new URL(u);
+    } catch {
+      continue;
+    }
+    out.push(u);
+    if (out.length === FEED_FLEXI_MAX_IMAGES) break;
+  }
+  return out;
+}
+
+/** FNV-1a, 32 bit, as 8 hex chars: a stable id part for a URL (works in the browser too). */
+function urlHash(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+const IMAGE_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  avif: 'image/avif',
+  svg: 'image/svg+xml',
+};
+
+/**
+ * A link attachment (`priloha`, nested in `cenik.prilohy`). Flexi sets
+ * typK = typPrilohy.odkaz itself when `link` is filled; nazSoub and
+ * contentType are required. The name follows Flexi's own "host - file".
+ */
+export function buildImageLink(itemId: string, url: string, main: boolean): Record<string, string> {
+  const u = new URL(url);
+  const last = u.pathname.split('/').pop() ?? '';
+  let file = last;
+  try {
+    file = decodeURIComponent(last);
+  } catch {
+    // A malformed %-sequence from the feed: keep the raw segment.
+  }
+  file ||= 'obrazek';
+  const ext = file.includes('.') ? file.split('.').pop()!.toLowerCase() : '';
+  const r: Record<string, string> = {
+    id: `ext:FEEDIMG:${itemId}:${urlHash(url)}`,
+    nazSoub: `${u.host} - ${file}`.slice(0, 255),
+    contentType: IMAGE_TYPES[ext] ?? 'content/unknown',
+    link: url,
+    linkPicture: 'true',
+  };
+  if (main) r.mainAttachment = 'true';
+  return r;
+}
+
+/** Feed images the product doesn't link yet. */
+const missingImages = (item: FeedItemForFlexi, cenik: CenikForFeed) => {
+  const have = new Set(cenik.odkazy.map((l) => l.trim()));
+  return feedImages(item).filter((u) => !have.has(u));
+};
+
 /** The new `cenik` record for PUT /c/{firma}/cenik.json. Throws FeedFlexiError. */
-export function buildCenikCreate(item: FeedItemForFlexi, kod: string): Record<string, string> {
+export function buildCenikCreate(item: FeedItemForFlexi, kod: string): Record<string, unknown> {
   const parsedKod = flexiKodSchema.safeParse(kod);
   if (!parsedKod.success) throw new FeedFlexiError('kodInvalid');
   const name = nazev(item);
@@ -183,7 +266,9 @@ export function buildCenikCreate(item: FeedItemForFlexi, kod: string): Record<st
     ['hmotMj', num(item.hmotnostNetto)],
   ];
   for (const [k, v] of optional) if (v !== null) r[k] = v;
-  return r;
+  const images = feedImages(item);
+  if (images.length === 0) return r;
+  return { ...r, prilohy: images.map((u, i) => buildImageLink(item.id, u, i === 0)) };
 }
 
 export interface FeedFieldChange {
@@ -213,6 +298,11 @@ export function feedItemChanges(item: FeedItemForFlexi, cenik: CenikForFeed): Fe
   add('kratkyPopis', cenik.kratkyPopis, text(item.kratkyPopis), (f) => f === text(cenik.kratkyPopis));
   add('dodaciLhuta', cenik.dodaciLhuta, num(item.dodaciLhuta), (f) => sameNumber(cenik.dodaciLhuta, f, 2));
   add('hmotnost', cenik.hmotnostNetto, num(item.hmotnostNetto), (f) => sameNumber(cenik.hmotnostNetto, f, 3));
+  // Images are only ever added: `feed` lists the missing ones, one per line.
+  const missing = missingImages(item, cenik);
+  if (missing.length > 0) {
+    out.push({ field: 'obrazky', flexi: cenik.odkazy.length ? cenik.odkazy.join('\n') : null, feed: missing.join('\n') });
+  }
   return out;
 }
 
@@ -221,10 +311,10 @@ export function buildCenikFeedUpdate(
   item: FeedItemForFlexi,
   cenik: CenikForFeed,
   fields: readonly FeedSyncField[],
-): Record<string, string> {
+): Record<string, unknown> {
   const changes = feedItemChanges(item, cenik).filter((c) => fields.includes(c.field));
   if (changes.length === 0) throw new FeedFlexiError('noChanges');
-  const r: Record<string, string> = { id: String(cenik.flexiId) };
+  const r: Record<string, unknown> = { id: String(cenik.flexiId) };
   for (const c of changes) {
     switch (c.field) {
       case 'nazev':
@@ -240,6 +330,11 @@ export function buildCenikFeedUpdate(
         break;
       case 'hmotnost':
         r.hmotMj = c.feed;
+        break;
+      case 'obrazky':
+        // Nested attachments are added; Flexi keeps the product's others. The
+        // first one becomes main only when the product has no main attachment.
+        r.prilohy = missingImages(item, cenik).map((u, i) => buildImageLink(item.id, u, i === 0 && !cenik.maHlavniPrilohu));
         break;
       default:
         r[c.field] = c.feed;

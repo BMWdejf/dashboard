@@ -22,6 +22,7 @@ const row = (n: number, over: Partial<FeedItemRow> = {}): FeedItemRow => ({
   szbDph: '21',
   dodaciLhuta: null,
   hmotnostNetto: null,
+  obrazky: [],
   kategorie: null,
   url: null,
   obrazek: null,
@@ -41,8 +42,11 @@ function make(opts: {
     opts.upsert ??
     (async (records: Record<string, unknown>[]) => records.map((r, i) => ({ 'request-id': String(r.id), id: String(500 + i) })));
   const upsert = jest.fn((_evidence: string, records: Record<string, unknown>[]) => write(records));
-  const list = jest.fn(async (_e: string, o?: { filter?: string }) => ({
-    rows: [...(o?.filter ?? '').matchAll(/\d+/g)].map((m) => ({ id: m[0], kod: `K${m[0]}`, nazev: 'X', typZasobyK: 'typZasoby.zbozi' })),
+  const list = jest.fn(async (evidence: string, o?: { filter?: string }) => ({
+    rows:
+      evidence === 'priloha'
+        ? []
+        : [...(o?.filter ?? '').matchAll(/\d+/g)].map((m) => ({ id: m[0], kod: `K${m[0]}`, nazev: 'X', typZasobyK: 'typZasoby.zbozi' })),
   }));
   const storeUpsert = jest.fn(async (_e: string, rows: unknown[]) => ({ written: rows.length, skipped: 0 }));
   const link = jest.fn(async (pairs: unknown[]) => pairs.length);
@@ -64,7 +68,7 @@ function make(opts: {
 
 describe('FeedFlexiService.create', () => {
   it('checks in dry-run and stops each item that cannot be written before Flexi', async () => {
-    const linked = row(3, { cenik: { id: 'c', flexiId: 9, kod: 'X', nazev: 'X', eanKod: null, popis: null, kratkyPopis: null, cenaZaklVcDph: null, typSazbyDph: null, dodaciLhuta: null, hmotnostNetto: null } });
+    const linked = row(3, { cenik: { id: 'c', flexiId: 9, kod: 'X', nazev: 'X', eanKod: null, popis: null, kratkyPopis: null, cenaZaklVcDph: null, typSazbyDph: null, dodaciLhuta: null, hmotnostNetto: null, odkazy: [], maHlavniPrilohu: false } });
     const { service, upsert, link, writer } = make({ items: [row(1), row(2), linked, row(4), row(5)], existing: ['TAKEN'] });
     const r = await service.create(FEED, {
       check: true,
@@ -137,6 +141,14 @@ describe('FeedFlexiService.create', () => {
   });
 });
 
+describe('FeedFlexiService images', () => {
+  it('sends the feed images nested in the new product', async () => {
+    const { service, upsert } = make({ items: [row(1, { obrazky: ['https://x.cz/a.jpg'] })] });
+    await service.create(FEED, { check: true, items: [{ id: id(1), kod: 'A' }] });
+    expect(upsert.mock.calls[0]?.[1]?.[0]).toMatchObject({ prilohy: [{ link: 'https://x.cz/a.jpg', mainAttachment: 'true' }] });
+  });
+});
+
 describe('FeedFlexiService.update', () => {
   const cenik = {
     id: 'c1',
@@ -150,6 +162,8 @@ describe('FeedFlexiService.update', () => {
     typSazbyDph: 'dphZakl',
     dodaciLhuta: null,
     hmotnostNetto: null,
+    odkazy: [] as string[],
+    maHlavniPrilohu: false,
   };
 
   it('writes the chosen changed fields of paired items only', async () => {

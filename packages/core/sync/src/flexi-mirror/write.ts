@@ -87,9 +87,9 @@ export async function syncOneProduct(opts: {
 }
 
 /**
- * Reads several products from Flexi into the mirror (no stock cards: new
- * products have none, and their stock comes with the next full sync). For
- * products created or updated from a supplier feed. Returns how many were found.
+ * Reads several products and their attachments from Flexi into the mirror
+ * (stock cards come with the next sync). For products created or updated from
+ * a supplier feed. Returns how many products were found.
  */
 export async function syncProductsByIds(opts: {
   flexi: MirrorFlexiReader;
@@ -109,6 +109,15 @@ export async function syncProductsByIds(opts: {
     if (mapped.errors.length) throw mapped.errors[0]!;
     if (mapped.rows.length) await opts.store.upsert('cenik', mapped.rows);
     found += mapped.rows.length;
+    // Their attachments too, so the feed page sees the image links written with them.
+    const prilohy = await opts.flexi.list<FlexiRecord>('priloha', {
+      filter: `cenik in (${chunk.join(',')})`,
+      detail: DETAIL.priloha,
+      limit: 0,
+    });
+    const mappedPrilohy = mapRecords('priloha', prilohy.rows);
+    if (mappedPrilohy.errors.length) throw mappedPrilohy.errors[0]!;
+    if (mappedPrilohy.rows.length) await opts.store.upsert('priloha', mappedPrilohy.rows);
   }
   return found;
 }
