@@ -85,3 +85,30 @@ export async function syncOneProduct(opts: {
   await store.refreshStock(period.flexiId, now());
   return { found: true, cards: mappedCards.rows.length };
 }
+
+/**
+ * Reads several products from Flexi into the mirror (no stock cards: new
+ * products have none, and their stock comes with the next full sync). For
+ * products created or updated from a supplier feed. Returns how many were found.
+ */
+export async function syncProductsByIds(opts: {
+  flexi: MirrorFlexiReader;
+  store: MirrorStore;
+  flexiIds: number[];
+}): Promise<number> {
+  const ids = [...new Set(opts.flexiIds)].filter((id) => Number.isInteger(id) && id > 0);
+  let found = 0;
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const { rows } = await opts.flexi.list<FlexiRecord>('cenik', {
+      filter: `id in (${chunk.join(',')})`,
+      detail: DETAIL.cenik,
+      limit: 0,
+    });
+    const mapped = mapRecords('cenik', rows);
+    if (mapped.errors.length) throw mapped.errors[0]!;
+    if (mapped.rows.length) await opts.store.upsert('cenik', mapped.rows);
+    found += mapped.rows.length;
+  }
+  return found;
+}

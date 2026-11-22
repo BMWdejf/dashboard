@@ -1,8 +1,9 @@
 import { BadRequestException, Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 
-import { feedPreviewInput, supplierFeedInput } from '@repo/core-sync';
+import { feedFlexiCreateInput, feedFlexiUpdateInput, feedPreviewInput, supplierFeedInput } from '@repo/core-sync';
 
 import { SyncTokenGuard } from '../flexi-sync/sync-token.guard';
+import { FeedFlexiService } from './feed-flexi.service';
 import { SupplierFeedsService } from './supplier-feeds.service';
 
 interface Schema<T> {
@@ -35,12 +36,18 @@ function createdBy(body: unknown): string | null {
  *                                  saves the feed and queues its first import (201 + id; 409 if the URL exists)
  * - POST /supplier-feeds/:id/import  queues an import (202)
  * - GET  /supplier-feeds/cron      queues the due imports, for an external scheduler (202)
+ * - POST /supplier-feeds/:id/flexi/create  { items: [{ id, kod }], check? }  new products in Flexi
+ * - POST /supplier-feeds/:id/flexi/update  { items: [id], fields, check? }  feed changes to paired products
+ *                                  both dry-run with check=true or unless FLEXI_DRY_RUN=false; per-item results
  * All need `Authorization: Bearer <SYNC_API_TOKEN>`.
  */
 @Controller('supplier-feeds')
 @UseGuards(SyncTokenGuard)
 export class SupplierFeedsController {
-  constructor(private readonly feeds: SupplierFeedsService) {}
+  constructor(
+    private readonly feeds: SupplierFeedsService,
+    private readonly flexi: FeedFlexiService,
+  ) {}
 
   @Post('preview')
   @HttpCode(200)
@@ -64,5 +71,17 @@ export class SupplierFeedsController {
   @HttpCode(202)
   cron() {
     return this.feeds.runDue();
+  }
+
+  @Post(':id/flexi/create')
+  @HttpCode(200)
+  createInFlexi(@Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+    return this.flexi.create(id, parse(feedFlexiCreateInput, body));
+  }
+
+  @Post(':id/flexi/update')
+  @HttpCode(200)
+  updateInFlexi(@Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+    return this.flexi.update(id, parse(feedFlexiUpdateInput, body));
   }
 }

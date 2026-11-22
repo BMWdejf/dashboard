@@ -80,6 +80,18 @@ describe('FlexiClient', () => {
     );
   });
 
+  it('keeps which record failed, by the id it was sent with', async () => {
+    const result = { 'request-id': 'ext:FEED:a', errors: [{ message: "Zkratku 'X' již používá jiný záznam." }] };
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValue(json({ winstrom: { success: 'false', results: [result] } }, 400));
+    const error = await make(fetchMock)
+      .upsert('cenik', [{ id: 'ext:FEED:a' }])
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(FlexiApiError);
+    expect((error as FlexiApiError).results).toEqual([result]);
+  });
+
   it('returns undefined for a missing record', async () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(json({}, 404));
     expect(await make(fetchMock).get('cenik', code('NEEXISTUJE'))).toBeUndefined();

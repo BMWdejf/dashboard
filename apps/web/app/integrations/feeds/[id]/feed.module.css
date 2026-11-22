@@ -1,0 +1,255 @@
+/*
+ * Supplier feed items (/integrations/feeds/[id]). The page frame, table, pills
+ * and buttons come from integrations.module.css; this adds the search, the
+ * action toolbar, the editable Flexi code and the result column.
+ */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.back {
+  width: fit-content;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+}
+
+.back:hover {
+  color: var(--color-text);
+}
+
+.back:focus-visible,
+.kod:focus-visible,
+.searchInput:focus-visible,
+.product:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+}
+
+.searchInput {
+  width: 260px;
+  max-width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 0.6px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 16px 24px;
+  border-bottom: 0.6px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.bad {
+  color: var(--trend-down-fg);
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 13px;
+}
+
+.fields legend {
+  float: left;
+  margin-right: 4px;
+  color: var(--color-text-subtle);
+  font-weight: 600;
+}
+
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.notice {
+  margin: 16px 24px 0;
+  padding: 12px 16px;
+  border: 0.6px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.notice_ok {
+  border-color: var(--trend-up-border);
+  background: var(--trend-up-bg);
+  color: var(--trend-up-fg);
+}
+
+.notice_warn {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  color: var(--color-text);
+}
+
+.notice_error {
+  border-color: var(--trend-down-border);
+  background: var(--trend-down-bg);
+  color: var(--trend-down-fg);
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.check {
+  width: 40px;
+}
+
+.selectedRow {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 260px;
+  max-width: 460px;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 0.6px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-sunken);
+  object-fit: cover;
+}
+
+.category {
+  max-width: 220px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.kod {
+  width: 340px;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0.6px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+}
+
+.kodBad {
+  border-color: var(--trend-down-border);
+}
+
+.product {
+  color: var(--color-link);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 480px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.changes del {
+  color: var(--color-text-subtle);
+}
+
+.changes ins {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.off {
+  opacity: 0.45;
+}
+
+.result {
+  min-width: 160px;
+  max-width: 320px;
+}
+
+.errors {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--trend-down-fg);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.pager {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.pager [aria-disabled='true'] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .search,
+  .searchInput {
+    width: 100%;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .kod {
+    width: 220px;
+  }
+}

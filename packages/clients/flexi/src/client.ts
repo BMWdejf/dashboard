@@ -35,6 +35,8 @@ export interface ListOptions {
 
 const writeResult = z.looseObject({
   id: z.string().optional(),
+  /** The `id` the record was sent with (e.g. an `ext:` id). */
+  'request-id': z.string().optional(),
   ref: z.string().optional(),
   errors: z.array(z.looseObject({ message: z.string() })).optional(),
 });
@@ -63,6 +65,8 @@ export class FlexiApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly messages: string[],
+    /** Per-record results of a failed write; `request-id` is the id we sent. */
+    public readonly results: FlexiWriteResult[] = [],
   ) {
     super(`ABRA Flexi ${status}: ${messages.join('; ') || 'request failed'}`);
     this.name = 'FlexiApiError';
@@ -161,7 +165,7 @@ export class FlexiClient {
     if (!parsed.success) throw new FlexiApiError(200, ['Unexpected write response']);
     const results = parsed.data.winstrom.results ?? [];
     if (parsed.data.winstrom.success !== 'true') {
-      throw new FlexiApiError(400, collectMessages(parsed.data.winstrom.message, results));
+      throw new FlexiApiError(400, collectMessages(parsed.data.winstrom.message, results), results);
     }
     return results;
   }
@@ -180,10 +184,9 @@ export class FlexiClient {
     const json: unknown = await res.json().catch(() => undefined);
     if (!res.ok) {
       const parsed = writeResponse.safeParse(json);
-      const msgs = parsed.success
-        ? collectMessages(parsed.data.winstrom.message, parsed.data.winstrom.results ?? [])
-        : [];
-      throw new FlexiApiError(res.status, msgs);
+      const results = parsed.success ? (parsed.data.winstrom.results ?? []) : [];
+      const msgs = parsed.success ? collectMessages(parsed.data.winstrom.message, results) : [];
+      throw new FlexiApiError(res.status, msgs, results);
     }
     return json;
   }
