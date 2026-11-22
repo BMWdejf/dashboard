@@ -33,6 +33,10 @@
     "./shoptet": {
       "types": "./dist/shoptet-logic.d.ts",
       "default": "./dist/shoptet-logic.js"
+    },
+    "./product-filters": {
+      "types": "./dist/product-filters.d.ts",
+      "default": "./dist/product-filters.js"
     }
   },
   "dependencies": {

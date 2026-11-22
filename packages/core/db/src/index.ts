@@ -7,6 +7,7 @@ export * from './health';
 export * from './flexi';
 export * from './settings';
 export * from './products';
+export * from './product-filters';
 export * from './flexi-mirror';
 export * from './flexi-mirror-sql';
 export * from './shoptet-logic';

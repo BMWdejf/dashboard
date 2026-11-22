@@ -1,4 +1,5 @@
 import { getDb } from './client';
+import { productFilterSql } from './product-filters-sql';
 import {
   buildKpis,
   buildSparklines,
@@ -44,6 +45,8 @@ export async function listProducts(
   const q = query.q?.trim() ? likePattern(query.q) : null;
   const today = pragueDate(query.now ?? new Date());
   const withVat = query.priceMode === 'withVat';
+  const threshold = query.settings.lowStockMode === 'threshold' ? query.settings.lowStockThreshold : null;
+  const filters = productFilterSql(query.filters ?? [], { today, threshold });
 
   // One round trip: the page's rows with the total (count(*) OVER () runs
   // before LIMIT). The minimum stock is summed only for the rows on the page.
@@ -53,6 +56,7 @@ export async function listProducts(
       FROM flexi_cenik c
       WHERE c.deleted_at IS NULL
         AND (${q}::text IS NULL OR c.nazev ILIKE ${q} OR c.kod ILIKE ${q} OR c.ean_kod ILIKE ${q})
+        AND ${filters}
       ORDER BY c.nazev, c.kod
       LIMIT ${query.perPage} OFFSET ${(page - 1) * query.perPage}
     )
@@ -79,7 +83,8 @@ export async function listProducts(
     const [c] = await db.$queryRaw<{ count: bigint }[]>`
       SELECT count(*) FROM flexi_cenik c
       WHERE c.deleted_at IS NULL
-        AND (${q}::text IS NULL OR c.nazev ILIKE ${q} OR c.kod ILIKE ${q} OR c.ean_kod ILIKE ${q})`;
+        AND (${q}::text IS NULL OR c.nazev ILIKE ${q} OR c.kod ILIKE ${q} OR c.ean_kod ILIKE ${q})
+        AND ${filters}`;
     total = Number(c?.count ?? 0n);
     page = clampPage(page, total, query.perPage);
     if (total) rows = await pageRows(page);
@@ -278,3 +283,25 @@ export async function getProductDetail(id: string, now = new Date()) {
 }
 
 export type ProductDetail = NonNullable<Awaited<ReturnType<typeof getProductDetail>>>;
+
+export interface FilterOption {
+  id: string;
+  kod: string;
+  nazev: string | null;
+}
+
+/** Choices for the Products filters: goods groups, units and the labels in use. */
+export async function getProductFilterOptions(): Promise<{
+  groups: FilterOption[];
+  units: FilterOption[];
+  tags: string[];
+}> {
+  const db = getDb();
+  const [groups, units, tags] = await Promise.all([
+    db.flexiSkupinaZbozi.findMany({ select: { id: true, kod: true, nazev: true }, orderBy: [{ nazev: 'asc' }, { kod: 'asc' }] }),
+    db.flexiMernaJednotka.findMany({ select: { id: true, kod: true, nazev: true }, orderBy: { kod: 'asc' } }),
+    db.$queryRaw<{ tag: string }[]>`
+      SELECT DISTINCT unnest(stitky) AS tag FROM flexi_cenik WHERE deleted_at IS NULL ORDER BY 1 LIMIT 500`,
+  ]);
+  return { groups, units, tags: tags.map((t) => t.tag) };
+}

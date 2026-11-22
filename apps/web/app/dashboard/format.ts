@@ -28,6 +28,7 @@ export function formatters(locale: Locale) {
     minute: '2-digit',
     timeZone: 'UTC',
   });
+  const day = new Intl.DateTimeFormat(l, { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'UTC' });
   const dateTime = new Intl.DateTimeFormat(l, {
     day: 'numeric',
     month: 'numeric',
@@ -42,6 +43,8 @@ export function formatters(locale: Locale) {
     money: (n: number) => usd.format(n),
     moneyCompact: (n: number) => usdCompact.format(n),
     date: (d: Date | null) => (d ? date.format(d) : '—'),
+    /** A calendar day given as YYYY-MM-DD. */
+    day: (iso: string) => day.format(new Date(`${iso}T00:00:00Z`)),
     dateTime: (d: Date | null) => (d ? dateTime.format(d) : '—'),
     /** Trend in percent: "+12,4 %" (cs) / "+12.4%" (en). */
     pct: (n: number) => (locale === 'cs' ? `${signed.format(n)} %` : `${signed.format(n)}%`),
