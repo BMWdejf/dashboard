@@ -57,10 +57,28 @@ describe('syncOneProduct', () => {
     'ucetObdobi@ref': '/c/demo/ucetni-obdobi/8.json',
     stavMJ: '60.0',
   };
+  const link = {
+    id: '31',
+    cenik: 'code:BZ_2',
+    'cenik@ref': '/c/demo/cenik/2.json',
+    nazSoub: 'example.com - 1.jpg',
+    contentType: 'image/jpeg',
+    typK: 'typPrilohy.odkaz',
+    mainAttachment: 'true',
+    link: 'https://example.com/1.jpg',
+  };
 
   function setup(found = true) {
     const list = jest.fn(async (evidence: string, _o?: { filter?: string }) => ({
-      rows: (evidence === 'cenik' ? (found ? [product] : []) : evidence === 'ucetni-obdobi' ? [period] : [card]) as never[],
+      rows: (evidence === 'cenik'
+        ? found
+          ? [product]
+          : []
+        : evidence === 'ucetni-obdobi'
+          ? [period]
+          : evidence === 'priloha'
+            ? [link]
+            : [card]) as never[],
     }));
     const flexi = { list, changes: jest.fn() } as unknown as MirrorFlexiReader & { list: typeof list };
     const store = {
@@ -84,11 +102,13 @@ describe('syncOneProduct', () => {
     expect(store.upsert).not.toHaveBeenCalled();
   });
 
-  it('reads several products in one filtered call, skipping duplicates', async () => {
+  it('reads several products and their attachments in filtered calls, skipping duplicates', async () => {
     const { flexi, store, list } = setup();
     await expect(syncProductsByIds({ flexi, store, flexiIds: [2, 2, 3] })).resolves.toBe(1);
-    expect(list).toHaveBeenCalledTimes(1);
-    expect(list.mock.calls[0]?.[1]?.filter).toBe('id in (2,3)');
-    expect(store.upsert).toHaveBeenCalledTimes(1);
+    expect(list.mock.calls.map((c) => [c[0], c[1]?.filter])).toEqual([
+      ['cenik', 'id in (2,3)'],
+      ['priloha', 'cenik in (2,3)'],
+    ]);
+    expect(store.upsert).toHaveBeenCalledWith('priloha', [expect.objectContaining({ flexiId: 31, odkaz: 'https://example.com/1.jpg' })]);
   });
 });

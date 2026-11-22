@@ -25,6 +25,7 @@ const item = (over: Partial<FeedItemForFlexi> = {}): FeedItemForFlexi => ({
   szbDph: '21.00',
   dodaciLhuta: '0.00',
   hmotnostNetto: null,
+  obrazky: [],
   ...over,
 });
 
@@ -39,6 +40,8 @@ const cenik = (over: Partial<CenikForFeed> = {}): CenikForFeed => ({
   typSazbyDph: 'dphZakl',
   dodaciLhuta: '0.00',
   hmotnostNetto: null,
+  odkazy: [],
+  maHlavniPrilohu: false,
   ...over,
 });
 
@@ -141,5 +144,37 @@ describe('feedFlexiCreateInput', () => {
     const one = { id: ID, kod: 'A' };
     expect(feedFlexiCreateInput.parse({ items: [one] }).check).toBe(false);
     expect(feedFlexiCreateInput.safeParse({ items: Array(201).fill(one) }).success).toBe(false);
+  });
+});
+
+describe('feed images → link attachments', () => {
+  const A = 'https://www.luzkovinysmolka.cz/user/shop/big/1000.jpg?6543';
+  const B = 'https://www.luzkovinysmolka.cz/user/shop/big/1000-1.png';
+
+  it('creates a product with its images as link attachments, the first one main', () => {
+    const r = buildCenikCreate(item({ obrazky: [A, ' ', 'ftp://x/y.jpg', B, A] }), 'K') as { prilohy: Record<string, string>[] };
+    expect(r.prilohy).toEqual([
+      expect.objectContaining({ nazSoub: 'www.luzkovinysmolka.cz - 1000.jpg', contentType: 'image/jpeg', link: A, linkPicture: 'true', mainAttachment: 'true' }),
+      expect.objectContaining({ nazSoub: 'www.luzkovinysmolka.cz - 1000-1.png', contentType: 'image/png', link: B }),
+    ]);
+    expect(r.prilohy[1]).not.toHaveProperty('mainAttachment');
+    // A stable id per item and URL, so a repeated write updates instead of adding.
+    expect(r.prilohy[0]!.id).toMatch(new RegExp(`^ext:FEEDIMG:${ID}:[0-9a-f]{8}$`));
+    expect(r.prilohy[0]!.id).toBe((buildCenikCreate(item({ obrazky: [A] }), 'K') as typeof r).prilohy[0]!.id);
+    expect(r.prilohy[0]!.id).not.toBe(r.prilohy[1]!.id);
+    expect(buildCenikCreate(item(), 'K')).not.toHaveProperty('prilohy');
+  });
+
+  it('adds only the images the product does not link yet, main only if it has none', () => {
+    expect(feedItemChanges(item({ obrazky: [A] }), cenik({ odkazy: [A] }))).toEqual([]);
+    expect(feedItemChanges(item({ obrazky: [A, B] }), cenik({ odkazy: [A] }))).toEqual([{ field: 'obrazky', flexi: A, feed: B }]);
+    const r = buildCenikFeedUpdate(item({ obrazky: [A, B] }), cenik(), ['obrazky']) as { prilohy: Record<string, string>[] };
+    expect(r.prilohy.map((p) => [p.link, p.mainAttachment])).toEqual([
+      [A, 'true'],
+      [B, undefined],
+    ]);
+    const withMain = buildCenikFeedUpdate(item({ obrazky: [A] }), cenik({ maHlavniPrilohu: true }), ['obrazky']) as typeof r;
+    expect(withMain.prilohy[0]).not.toHaveProperty('mainAttachment');
+    expect(problem(() => buildCenikFeedUpdate(item({ obrazky: [A] }), cenik({ odkazy: [A] }), ['obrazky']))).toBe('noChanges');
   });
 });

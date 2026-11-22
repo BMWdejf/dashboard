@@ -517,6 +517,7 @@ export const cs = {
       kratkyPopis: 'Krátký popis',
       dodaciLhuta: 'Dodací lhůta',
       hmotnost: 'Hmotnost',
+      obrazky: 'Obrázky (odkazy)',
     },
     empty_value: 'prázdné',
     openProduct: 'Otevřít produkt',

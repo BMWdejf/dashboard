@@ -114,6 +114,14 @@ An evidence's fields are listed by the server itself at
   (`id in (…)`) and new ones are paired (`supplier_feed_item.cenik_id`).
 - Updates compare the feed with the mirrored product (`feedItemChanges`); a value
   missing in the feed never clears Flexi's.
+- Feed images go as link attachments nested in the product:
+  `prilohy: [{ id: ext:FEEDIMG:<item id>:<url hash>, nazSoub, contentType, link,
+  linkPicture }]`. `priloha.typK` and `priloha.cenik` aren't writable; Flexi
+  sets `typPrilohy.odkaz` itself from `link`. Only links the product doesn't
+  have yet are sent ("Obrázky" on the changes tab); the first is main only if
+  the product has no main attachment. `syncProductsByIds` also reads
+  `priloha` with the path filter `(cenik in (…))` (a `filter=` query
+  parameter is ignored by Flexi).
 - We never create `skladova-karta`. Flexi itself adds a card for a new stock
   item in every warehouse that has "Nové zboží automaticky přidat na tento
   sklad" on, so one product can show up in the stock-card list once per

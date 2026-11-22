@@ -513,6 +513,7 @@ export const en: Dictionary = {
       kratkyPopis: 'Short description',
       dodaciLhuta: 'Delivery time',
       hmotnost: 'Weight',
+      obrazky: 'Images (links)',
     },
     empty_value: 'empty',
     openProduct: 'Open product',

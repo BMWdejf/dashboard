@@ -82,7 +82,7 @@ export class FeedFlexiService {
     for (const w of wanted) kodCount.set(w.kod, (kodCount.get(w.kod) ?? 0) + 1);
 
     const results = new Map<string, FeedFlexiItemResult>();
-    const records: { itemId: string; record: Record<string, string> }[] = [];
+    const records: { itemId: string; record: Record<string, unknown> }[] = [];
     for (const w of wanted) {
       const fail = (p: FeedFlexiProblem) => results.set(w.id, { id: w.id, ok: false, problems: [p], messages: [] });
       const item = byId.get(w.id);
@@ -119,7 +119,7 @@ export class FeedFlexiService {
     const writer = this.writer(input.check);
     const items = new Map((await this.deps.repo.items(feedId, input.items)).map((i) => [i.id, i]));
     const results = new Map<string, FeedFlexiItemResult>();
-    const records: { itemId: string; record: Record<string, string> }[] = [];
+    const records: { itemId: string; record: Record<string, unknown> }[] = [];
     for (const id of input.items) {
       const fail = (p: FeedFlexiProblem) => results.set(id, { id, ok: false, problems: [p], messages: [] });
       const item = items.get(id);
@@ -160,7 +160,7 @@ export class FeedFlexiService {
    */
   private async write(
     writer: FeedFlexiWriter,
-    records: { itemId: string; record: Record<string, string> }[],
+    records: { itemId: string; record: Record<string, unknown> }[],
   ): Promise<FeedFlexiItemResult[]> {
     const out: FeedFlexiItemResult[] = [];
     for (let i = 0; i < records.length; i += CHUNK) {
@@ -172,7 +172,7 @@ export class FeedFlexiService {
         );
         const byRequest = new Map(results.map((r) => [r['request-id'], r]));
         for (const c of chunk) {
-          const id = Number(byRequest.get(c.record.id)?.id);
+          const id = Number(byRequest.get(String(c.record.id))?.id);
           out.push({
             id: c.itemId,
             ok: true,
@@ -184,9 +184,9 @@ export class FeedFlexiService {
       } catch (e) {
         if (e instanceof FlexiApiError && e.status >= 400 && e.status < 500) {
           const errors = new Map(e.results.map((r) => [r['request-id'], (r.errors ?? []).map((x) => x.message)]));
-          const own = chunk.some((c) => errors.get(c.record.id)?.length);
+          const own = chunk.some((c) => errors.get(String(c.record.id))?.length);
           for (const c of chunk) {
-            const messages = errors.get(c.record.id) ?? [];
+            const messages = errors.get(String(c.record.id)) ?? [];
             out.push(
               messages.length
                 ? { id: c.itemId, ok: false, problems: [], messages }

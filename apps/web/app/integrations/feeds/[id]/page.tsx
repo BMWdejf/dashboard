@@ -25,6 +25,11 @@ function shown(field: string, v: string | null, f: Formatters): string | null {
   if (field === 'cena') return f.czk(v);
   if (field === 'sazbaDph') return VAT[v] ?? v;
   if (field === 'dodaciLhuta' || field === 'hmotnost') return f.qty(v);
+  if (field === 'obrazky') {
+    // One URL per line; the file names are enough to tell them apart.
+    const files = v.split('\n').map((u) => u.split('?')[0]!.split('/').pop() || u);
+    return files.length > 3 ? `${files.slice(0, 3).join(', ')} +${files.length - 3}` : files.join(', ');
+  }
   const plain = v.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   return plain.length > 120 ? `${plain.slice(0, 117)}…` : plain;
 }

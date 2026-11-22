@@ -48,6 +48,7 @@ const ITEM_SELECT = {
       dodaciLhuta: true,
       hmotnostNetto: true,
       deletedAt: true,
+      prilohy: { select: { odkaz: true, hlavni: true } },
     },
   },
 } satisfies Prisma.SupplierFeedItemSelect;
@@ -67,6 +68,7 @@ function toRow(i: Selected): FeedItemRow {
     szbDph: dec(i.szbDph),
     dodaciLhuta: dec(i.dodaciLhuta),
     hmotnostNetto: dec(i.hmotnostNetto),
+    obrazky: i.obrazky,
   };
   // A product deleted in Flexi counts as not paired.
   const c = i.cenik && !i.cenik.deletedAt ? i.cenik : null;
@@ -83,6 +85,8 @@ function toRow(i: Selected): FeedItemRow {
         typSazbyDph: c.typSazbyDph,
         dodaciLhuta: dec(c.dodaciLhuta),
         hmotnostNetto: dec(c.hmotnostNetto),
+        odkazy: c.prilohy.flatMap((p) => (p.odkaz ? [p.odkaz] : [])),
+        maHlavniPrilohu: c.prilohy.some((p) => p.hlavni),
       }
     : null;
   return {
