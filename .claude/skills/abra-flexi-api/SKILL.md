@@ -114,6 +114,10 @@ An evidence's fields are listed by the server itself at
   (`id in (…)`) and new ones are paired (`supplier_feed_item.cenik_id`).
 - Updates compare the feed with the mirrored product (`feedItemChanges`); a value
   missing in the feed never clears Flexi's.
+- We never create `skladova-karta`. Flexi itself adds a card for a new stock
+  item in every warehouse that has "Nové zboží automaticky přidat na tento
+  sklad" on, so one product can show up in the stock-card list once per
+  warehouse. That is not a duplicate: count `cenik` rows by `kod` to check.
 
 ## Evidences we use
 
