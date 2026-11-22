@@ -543,7 +543,7 @@ export const en: Dictionary = {
       notSignedIn: 'You are not signed in.',
       apiUnconfigured: 'API_URL or SYNC_API_TOKEN is missing in the web app.',
       apiUnreachable: 'The API does not respond.',
-      flexiUnconfigured: 'The API has no Flexi access (FLEXI_URL, FLEXI_COMPANY, FLEXI_USER, FLEXI_PASSWORD).',
+      flexiUnconfigured: 'The API has no Flexi environment variables: FLEXI_URL, FLEXI_COMPANY, FLEXI_USER, FLEXI_PASSWORD. Set them where the API runs (locally in the root .env.local) and restart the API.',
       failed: 'The action failed.',
     },
   },

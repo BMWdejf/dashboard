@@ -547,7 +547,7 @@ export const cs = {
       notSignedIn: 'Nejste přihlášeni.',
       apiUnconfigured: 'Chybí API_URL nebo SYNC_API_TOKEN ve webu.',
       apiUnreachable: 'API neodpovídá.',
-      flexiUnconfigured: 'V API chybí přístup k Flexi (FLEXI_URL, FLEXI_COMPANY, FLEXI_USER, FLEXI_PASSWORD).',
+      flexiUnconfigured: 'API nemá nastavené proměnné prostředí pro Flexi: FLEXI_URL, FLEXI_COMPANY, FLEXI_USER, FLEXI_PASSWORD. Doplňte je tam, kde API běží (lokálně do .env.local v kořeni repa), a API restartujte.',
       failed: 'Akce se nepodařila.',
     },
   },
