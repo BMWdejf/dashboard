@@ -778,3 +778,327 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Filters: the button in the table head, the side panel (<dialog>) and the
+   chips of active filters under the head. */
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  color: var(--color-text);
+}
+
+.filterButtonActive {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-accent);
+}
+
+.filterButton:focus-visible,
+.filterSecondary:focus-visible,
+.filterClose:focus-visible,
+.filterRemove:focus-visible,
+.chip:focus-visible,
+.chipsClear:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* A funnel drawn with a mask, so it takes the text colour. */
+.filterIcon {
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 2h13a.5.5 0 0 1 .4.8L10 9v4.5a.5.5 0 0 1-.28.45l-3 1.5A.5.5 0 0 1 6 15V9L1.1 2.8A.5.5 0 0 1 1.5 2z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.filterDialog {
+  width: min(440px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: -20px 0 40px -12px rgba(0, 0, 0, 0.25);
+}
+
+.filterDialog::backdrop {
+  background: var(--color-backdrop, rgba(0, 0, 0, 0.35));
+}
+
+.filterPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.filterPanelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.filterPanelHead h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.filterPanelHead p {
+  margin-top: 4px;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.filterClose,
+.filterRemove {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.filterClose:hover,
+.filterRemove:hover {
+  background: var(--color-badge);
+  color: var(--color-text);
+}
+
+.filterRows {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.filterEmpty {
+  color: var(--color-text-subtle);
+  font-size: 13px;
+}
+
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 10px;
+}
+
+.filterRowIncomplete {
+  border-style: dashed;
+}
+
+.filterRowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.filterRowHead legend {
+  float: left;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filterInline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterRow select,
+.filterRow input:not([type='checkbox'], [type='radio']),
+.filterAdd select {
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.filterInline > input {
+  flex: 1;
+}
+
+.filterRow select:focus-visible,
+.filterRow input:focus-visible,
+.filterAdd select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.filterRange {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 140px;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.filterRange input {
+  flex: 1;
+  width: 100%;
+}
+
+.filterRadio,
+.filterCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filterRadio {
+  padding: 6px 12px 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 8px;
+}
+
+.filterRadio input,
+.filterCheck input {
+  accent-color: var(--color-accent);
+}
+
+.filterChecks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterChecksSearch {
+  width: 100%;
+}
+
+.filterChecksList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.filterAdd select {
+  width: 100%;
+  border-style: dashed;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.filterPanelFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.filterHint {
+  flex-basis: 100%;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+}
+
+.filterSecondary {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.chipsCount {
+  margin-right: 4px;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 6px 4px 10px;
+  border-radius: var(--radius-badge);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-text);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.chip:hover .chipX {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.chipX {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chipsClear {
+  color: var(--color-accent);
+  font-size: 12px;
+}

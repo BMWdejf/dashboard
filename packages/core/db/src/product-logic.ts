@@ -1,3 +1,4 @@
+import type { ProductFilter } from './product-filters';
 import { trend, type PriceMode, type ProductSettings } from './settings';
 
 /** Pure parts of the Products page (status, paging, KPI maths). Tested. */
@@ -20,6 +21,8 @@ export interface ProductListRow {
 
 export interface ProductListQuery {
   q?: string;
+  /** Filters from the URL (parseProductFilters), joined with AND. */
+  filters?: readonly ProductFilter[];
   page: number;
   perPage: number;
   priceMode: PriceMode;

@@ -1,17 +1,22 @@
 import {
   DEFAULT_PRODUCT_SETTINGS,
   getLastFlexiSync,
+  getProductFilterOptions,
   getProductKpis,
   getProductSparklines,
   getUserPreferences,
   listProducts,
+  parseProductFilters,
   PER_PAGE_OPTIONS,
+  type FilterOption,
+  type ProductFilter,
   type ProductKpi,
   type ProductKpis,
   type ProductListRow,
   type ProductSettings,
   type ProductSparklines,
   type StockStatus,
+  withFilters,
 } from '@repo/core-db';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -21,7 +26,9 @@ import { formatters, type Formatters } from '../dashboard/format';
 import { getAuth } from '../../lib/auth/server';
 import { fill, type Dictionary } from '../../lib/i18n';
 import { getI18n } from '../../lib/locale';
+import { describeFilter, filtersHref } from './filter-chips';
 import { PerPageSelect } from './PerPageSelect';
+import { ProductFilters, type FilterChoices } from './ProductFilters';
 import { ProductSearch } from './ProductSearch';
 import { RowActions } from './RowActions';
 import { Sparkline } from './Sparkline';
@@ -34,15 +41,23 @@ type Params = Promise<Record<string, string | string[] | undefined>>;
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-/** Query string for a page link, keeping the search and page size. */
-function href(q: string, page: number, per: number): string {
+/** The list's state as URL params (search, filters, page size), without the page. */
+function listParams(q: string, per: number, filters: readonly ProductFilter[]): URLSearchParams {
   const params = new URLSearchParams();
   if (q) params.set('q', q);
-  if (page > 1) params.set('page', String(page));
   if (per !== PER_PAGE_OPTIONS[0]) params.set('per', String(per));
+  return withFilters(params, filters);
+}
+
+/** Link to a page of the list, keeping the search, filters and page size. */
+function href(base: URLSearchParams, page: number): string {
+  const params = new URLSearchParams(base);
+  if (page > 1) params.set('page', String(page));
   const s = params.toString();
   return s ? `/products?${s}` : '/products';
 }
+
+const choiceLabel = (o: FilterOption) => (o.nazev && o.nazev !== o.kod ? `${o.nazev} (${o.kod})` : o.kod);
 
 export default async function ProductsPage({ searchParams }: { searchParams: Params }) {
   const { data: session } = await getAuth().getSession();
@@ -58,13 +73,15 @@ export default async function ProductsPage({ searchParams }: { searchParams: Par
   const perRaw = Number(one(sp.per));
   const per = (PER_PAGE_OPTIONS as readonly number[]).includes(perRaw) ? perRaw : PER_PAGE_OPTIONS[0];
   const pageRaw = Number(one(sp.page) ?? 1);
+  const filters = parseProductFilters(sp);
+  const base = listParams(q, per, filters);
 
   const prefs = await getUserPreferences(user.id).catch(() => null);
   const settings: ProductSettings = prefs?.productSettings ?? DEFAULT_PRODUCT_SETTINGS;
   const priceMode = prefs?.priceMode ?? 'withVat';
 
-  const [list, kpis, sparks, lastSync] = await Promise.all([
-    listProducts({ q, page: pageRaw, perPage: per, priceMode, settings }).catch((e) => {
+  const [list, kpis, sparks, lastSync, options] = await Promise.all([
+    listProducts({ q, filters, page: pageRaw, perPage: per, priceMode, settings }).catch((e) => {
       console.error('products: list failed', e instanceof Error ? e.message : e);
       return null;
     }),
@@ -77,7 +94,17 @@ export default async function ProductsPage({ searchParams }: { searchParams: Par
       return null;
     }),
     loadSync(),
+    getProductFilterOptions().catch((e) => {
+      console.error('products: filter options failed', e instanceof Error ? e.message : e);
+      return { groups: [], units: [], tags: [] };
+    }),
   ]);
+  const choices: FilterChoices = {
+    groups: options.groups.map((o) => ({ id: o.id, label: choiceLabel(o) })),
+    units: options.units.map((o) => ({ id: o.id, label: choiceLabel(o) })),
+    tags: options.tags,
+  };
+  const fl = p.filters;
 
   return (
     <>
@@ -108,25 +135,48 @@ export default async function ProductsPage({ searchParams }: { searchParams: Par
               <h2 id="products-title">{p.table.title}</h2>
               <SyncBadge sync={lastSync} t={p.sync} f={f} />
             </div>
-            {list && list.total > 0 && (
-              <p className={styles.range}>
-                {fill(p.table.range, {
-                  from: f.whole((list.page - 1) * per + 1),
-                  to: f.whole(Math.min(list.page * per, list.total)),
-                  total: f.whole(list.total),
-                })}
-              </p>
-            )}
+            <ProductFilters filters={filters} choices={choices} labels={fl} />
           </div>
+
+          {filters.length > 0 && (
+            <div className={styles.chips} aria-label={fl.active} role="group">
+              {list && <span className={styles.chipsCount}>{fill(fl.found, { total: f.whole(list.total) })}</span>}
+              {filters.map((flt) => {
+                const text = describeFilter(flt, fl, choices, {
+                  number: (n) => f.qty(String(n)),
+                  day: f.day,
+                });
+                return (
+                  <Link
+                    key={flt.key}
+                    href={filtersHref(base, filters.filter((x) => x !== flt))}
+                    className={styles.chip}
+                    aria-label={fill(fl.removeChip, { field: text })}
+                    title={fill(fl.removeChip, { field: text })}
+                  >
+                    {text}
+                    <span aria-hidden className={styles.chipX}>×</span>
+                  </Link>
+                );
+              })}
+              <Link href={filtersHref(base, [])} className={styles.chipsClear}>
+                {fl.clear}
+              </Link>
+            </div>
+          )}
 
           {!list ? (
             <p className={styles.message} role="alert">
               {p.table.error}
             </p>
           ) : list.total === 0 ? (
-            q ? (
+            filters.length ? (
               <p className={styles.message}>
-                {fill(p.table.noResults, { q })} <Link href={href('', 1, per)}>{p.table.clearSearch}</Link>
+                {fl.noResults} <Link href={filtersHref(base, [])}>{fl.clear}</Link>
+              </p>
+            ) : q ? (
+              <p className={styles.message}>
+                {fill(p.table.noResults, { q })} <Link href={href(listParams('', per, filters), 1)}>{p.table.clearSearch}</Link>
               </p>
             ) : (
               <p className={styles.message}>
@@ -151,12 +201,12 @@ export default async function ProductsPage({ searchParams }: { searchParams: Par
               <PerPageSelect label={p.table.rowsPerPage} value={per} options={[...PER_PAGE_OPTIONS]} />
               <nav className={styles.pageLinks} aria-label={p.table.pagination}>
                 <PageLink
-                  to={list.page > 1 ? href(q, list.page - 1, per) : null}
+                  to={list.page > 1 ? href(base, list.page - 1) : null}
                   label={p.table.prev}
                   dir="prev"
                 />
                 <PageLink
-                  to={list.page * per < list.total ? href(q, list.page + 1, per) : null}
+                  to={list.page * per < list.total ? href(base, list.page + 1) : null}
                   label={p.table.next}
                   dir="next"
                 />
