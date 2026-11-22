@@ -1,0 +1,40 @@
+# Render Blueprint: apps/api (NestJS) as a web service.
+# Secrets (sync: false) are entered in the Render dashboard, never here.
+services:
+  - type: web
+    name: dashboard-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: master
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter "api..." -r build
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/**
+        - pnpm-lock.yaml
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "26.12.0"
+      # Pooled URL of the Neon `dashboard` database.
+      - key: DATABASE_URL
+        sync: false
+      # Same value as SYNC_API_TOKEN in the web app.
+      - key: SYNC_API_TOKEN
+        sync: false
+      - key: FLEXI_URL
+        sync: false
+      - key: FLEXI_COMPANY
+        sync: false
+      - key: FLEXI_USER
+        sync: false
+      - key: FLEXI_PASSWORD
+        sync: false
+      # Writes to Flexi stay dry-run on the hosted API.
+      - key: FLEXI_DRY_RUN
+        value: "true"
+      - key: FLEXI_CHECK_ALLOW_PRIVATE
+        value: "false"

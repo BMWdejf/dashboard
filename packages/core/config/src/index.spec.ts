@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { EnvError, flexiEnv, integrationChecksEnv, loadEnv, shoptetEnv } from './index';
+import { EnvError, flexiEnv, integrationChecksEnv, loadEnv, serverEnv, shoptetEnv } from './index';
 
 describe('loadEnv', () => {
   it('applies defaults', () => {
@@ -22,6 +22,12 @@ describe('loadEnv', () => {
     expect(loadEnv(integrationChecksEnv, {}).FLEXI_CHECK_ALLOW_PRIVATE).toBe(false);
     expect(loadEnv(integrationChecksEnv, { FLEXI_CHECK_ALLOW_PRIVATE: 'true' }).FLEXI_CHECK_ALLOW_PRIVATE).toBe(true);
     expect(() => loadEnv(integrationChecksEnv, { FLEXI_CHECK_ALLOW_PRIVATE: 'yes' })).toThrow(EnvError);
+  });
+
+  it('reads the API port from PORT, 3000 by default', () => {
+    expect(loadEnv(serverEnv, {}).PORT).toBe(3000);
+    expect(loadEnv(serverEnv, { PORT: '10000' }).PORT).toBe(10000);
+    expect(() => loadEnv(serverEnv, { PORT: 'abc' })).toThrow(EnvError);
   });
 
   it('lists every missing variable', () => {
