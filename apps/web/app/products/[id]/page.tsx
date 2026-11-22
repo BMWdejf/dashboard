@@ -69,6 +69,109 @@ function mainImage(prilohy: ProductDetail['prilohy']): string | null {
   return url && url.startsWith('https://') ? url : null;
 }
 
+interface FeedCard {
+  badge: { text: string; tone: 'idle' | 'accent' };
+  active: boolean;
+  rows: [string, React.ReactNode][];
+}
+
+/**
+ * The "XML feed dodavatele" card: the feed the product is paired with (via
+ * supplier_feed_item.cenik_id), its last import and when the product was last
+ * in it. Reads the clock, so it runs outside render.
+ */
+function feedCard(p: ProductDetail, locale: Locale, t: T, f: Formatters): FeedCard {
+  const [item, ...others] = p.supplierItems;
+  if (!item) {
+    return {
+      badge: { text: t.notConnected, tone: 'idle' },
+      active: false,
+      rows: [
+        [t.lastFetch, '—'],
+        [t.volume, '—'],
+      ],
+    };
+  }
+  const now = Date.now();
+  const time = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Prague',
+  });
+  const when = (at: Date) => `${time.format(at)} (${relative(at, now, locale)})`;
+  const { feed } = item;
+  const importStatus =
+    feed.lastImportStatus === 'failed'
+      ? ` · ${t.feedImportFailed}`
+      : feed.lastImportStatus === 'running'
+        ? ` · ${t.feedImportRunning}`
+        : '';
+  const stats = (feed.lastImportStats ?? {}) as { items?: number; bytes?: number };
+  const size =
+    typeof stats.bytes === 'number'
+      ? new Intl.NumberFormat(intlLocale(locale), { style: 'unit', unit: 'megabyte', maximumFractionDigits: 1 }).format(
+          stats.bytes / 1_000_000,
+        )
+      : null;
+  const volume =
+    typeof stats.items === 'number'
+      ? size
+        ? fill(t.feedVolume, { items: f.whole(stats.items), size })
+        : f.whole(stats.items)
+      : '—';
+  const removed = item.removedAt !== null;
+  return {
+    badge: removed ? { text: t.feedRemoved, tone: 'idle' } : { text: t.feedConnected, tone: 'accent' },
+    active: !removed,
+    rows: [
+      [
+        t.feedLink,
+        <>
+          <Link key="feed" href={`/integrations/feeds/${feed.id}`} className={d.feedLink}>
+            {feed.name}
+          </Link>
+          {others.length > 0 && <> {fill(t.feedMore, { n: others.length })}</>}
+        </>,
+      ],
+      [t.feedSupplierKod, item.kod],
+      [t.feedLastImport, feed.lastImportAt ? `${when(feed.lastImportAt)}${importStatus}` : '—'],
+      [t.feedItemSeen, removed ? fill(t.feedRemovedAt, { when: when(item.removedAt!) }) : when(item.lastSeenAt)],
+      [t.volume, volume],
+    ],
+  };
+}
+
+/**
+ * The paired feed item's values for the mapping table's feed column. Prices,
+ * name and VAT are compared with Flexi; stock and category are the supplier's
+ * own (their stock, their category tree) and never "differ".
+ */
+function feedValues(
+  p: ProductDetail,
+  prices: { net: number | null; gross: number | null; vat: number | null },
+  f: Formatters,
+): EditorData['feed'] {
+  const item = p.supplierItems.find((i) => i.removedAt === null) ?? p.supplierItems[0];
+  if (!item) return null;
+  const n = (v: Num) => (v === null ? null : Number(v.toString()));
+  const differ = (a: number | null, b: number | null) => a !== null && b !== null && a.toFixed(2) !== b.toFixed(2);
+  const gross = n(item.cenaBezna);
+  const vat = n(item.szbDph);
+  const net = gross !== null && vat !== null ? gross / (1 + vat / 100) : null;
+  const purchase = n(item.nakupCena);
+  const out: NonNullable<EditorData['feed']> = {};
+  if (item.nazev) out.title = { value: item.nazev, differs: item.nazev.trim() !== p.nazev.trim() };
+  if (purchase !== null) out.purchase = { value: f.czk(String(purchase)), differs: differ(purchase, n(p.nakupCena)) };
+  if (net !== null) out.net = { value: f.czk(String(net)), differs: differ(net, prices.net) };
+  if (gross !== null) out.gross = { value: f.czk(String(gross)), differs: differ(gross, prices.gross) };
+  if (vat !== null) out.vat = { value: f.share(vat), differs: differ(vat, prices.vat) };
+  if (item.sumStavMj !== null) out.stock = { value: f.qty(item.sumStavMj.toString()), differs: false };
+  if (item.kategorie) out.category = { value: item.kategorie, differs: false };
+  return out;
+}
+
 /** Sync runs for the header badge and the log card (time maths outside render). */
 async function loadSync(
   locale: Locale,
@@ -185,6 +288,7 @@ export default async function ProductDetailPage({
   });
   const image = mainImage(p.prilohy);
   const supplier = p.dodavatele.find((s) => s.primarni) ?? p.dodavatele[0];
+  const feed = feedCard(p, locale, td, f);
   const group = p.skupinaZbozi
     ? (p.skupinaZbozi.nazev ?? p.skupinaZbozi.kod)
     : null;
@@ -236,6 +340,7 @@ export default async function ProductDetailPage({
     skladove: p.skladove,
     groups,
     shoptet,
+    feed: feedValues(p, { net, gross, vat: vatRate }, f),
   };
 
   return (
@@ -312,11 +417,9 @@ export default async function ProductDetailPage({
             <div className={d.connectors} aria-label={td.connectors}>
               <Connector
                 title={td.feedTitle}
-                badge={{ text: td.notConnected, tone: 'idle' }}
-                rows={[
-                  [td.lastFetch, '—'],
-                  [td.volume, '—'],
-                ]}
+                badge={feed.badge}
+                rows={feed.rows}
+                active={feed.active}
               />
               <Connector
                 title={td.flexiTitle}

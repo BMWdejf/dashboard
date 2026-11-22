@@ -53,7 +53,14 @@ export interface EditorData {
   skladove: boolean;
   groups: { kod: string; nazev: string | null }[];
   shoptet: ShoptetSettings;
+  /**
+   * The paired supplier feed item's values per mapping row (formatted on the
+   * server); `differs` marks a value that is not the same as Flexi's.
+   */
+  feed: Partial<Record<MappingRowKey, { value: string; differs: boolean }>> | null;
 }
+
+export type MappingRowKey = 'title' | 'purchase' | 'net' | 'gross' | 'vat' | 'stock' | 'category';
 
 type Labels = Dictionary['products']['detail'];
 
@@ -407,7 +414,7 @@ export function StockRules() {
 // ---------------------------------------------------------------------------
 
 type Row = {
-  key: string;
+  key: MappingRowKey;
   label: string;
   type: string;
   flexi: React.ReactNode;
@@ -805,7 +812,7 @@ export function MappingTable() {
                   <span className={d.attr}>{r.label}</span>
                   <span className={d.typeTag}>{r.type}</span>
                 </th>
-                <td className={d.muted}>—</td>
+                <FeedCell value={data.feed?.[r.key]} t={t} />
                 <td className={d.flexiValue}>{r.flexi}</td>
                 <td>
                   <span
@@ -862,8 +869,8 @@ export function MappingTable() {
     const esc = (v: string) =>
       `"${(/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
     const lines = [
-      [te.csvAttribute, te.csvFlexi, te.csvRule, te.csvShoptet],
-      ...rows.map((r) => [r.label, r.flexiText, r.rule.text, r.shoptetText]),
+      [te.csvAttribute, te.csvFeed, te.csvFlexi, te.csvRule, te.csvShoptet],
+      ...rows.map((r) => [r.label, data.feed?.[r.key]?.value ?? '', r.flexiText, r.rule.text, r.shoptetText]),
     ].map((cols) => cols.map((c) => esc(c.trim())).join(';'));
     const blob = new Blob(['﻿' + lines.join('\r\n')], {
       type: 'text/csv;charset=utf-8',
@@ -874,4 +881,15 @@ export function MappingTable() {
     a.click();
     URL.revokeObjectURL(a.href);
   }
+}
+
+/** The supplier feed's value of one mapping row; a value that differs from Flexi is marked. */
+function FeedCell({ value, t }: { value: { value: string; differs: boolean } | undefined; t: Labels }) {
+  if (!value) return <td className={d.muted}>—</td>;
+  return (
+    <td className={value.differs ? d.feedDiffers : d.feedValue}>
+      {value.value}
+      {value.differs && <span className={d.feedDiffersTag}>{t.feedDiffers}</span>}
+    </td>
+  );
 }
