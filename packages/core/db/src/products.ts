@@ -268,7 +268,7 @@ export async function getProductDetail(id: string, now = new Date()) {
           kategorie: true,
           lastSeenAt: true,
           removedAt: true,
-          feed: { select: { id: true, name: true, lastImportAt: true, lastImportStatus: true, lastImportStats: true } },
+          feed: { select: { id: true, name: true, lastImportAt: true, lastImportStatus: true } },
         },
         orderBy: [{ removedAt: { sort: 'desc', nulls: 'first' } }, { lastSeenAt: 'desc' }],
         take: 10,
