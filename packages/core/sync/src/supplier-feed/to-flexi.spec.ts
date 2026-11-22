@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
   buildCenikCreate,
   buildCenikFeedUpdate,
+  buildImageLink,
   feedFlexiCreateInput,
   FeedFlexiError,
   feedItemChanges,
@@ -163,6 +164,8 @@ describe('feed images → link attachments', () => {
     expect(r.prilohy[0]!.id).toBe((buildCenikCreate(item({ obrazky: [A] }), 'K') as typeof r).prilohy[0]!.id);
     expect(r.prilohy[0]!.id).not.toBe(r.prilohy[1]!.id);
     expect(buildCenikCreate(item(), 'K')).not.toHaveProperty('prilohy');
+    // A malformed %-sequence doesn't throw.
+    expect(buildImageLink(ID, 'https://x.cz/a%E0%A4%A.jpg', false).nazSoub).toBe('x.cz - a%E0%A4%A.jpg');
   });
 
   it('adds only the images the product does not link yet, main only if it has none', () => {

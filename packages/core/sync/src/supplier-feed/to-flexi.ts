@@ -213,7 +213,14 @@ const IMAGE_TYPES: Record<string, string> = {
  */
 export function buildImageLink(itemId: string, url: string, main: boolean): Record<string, string> {
   const u = new URL(url);
-  const file = decodeURIComponent(u.pathname.split('/').pop() ?? '') || 'obrazek';
+  const last = u.pathname.split('/').pop() ?? '';
+  let file = last;
+  try {
+    file = decodeURIComponent(last);
+  } catch {
+    // A malformed %-sequence from the feed: keep the raw segment.
+  }
+  file ||= 'obrazek';
   const ext = file.includes('.') ? file.split('.').pop()!.toLowerCase() : '';
   const r: Record<string, string> = {
     id: `ext:FEEDIMG:${itemId}:${urlHash(url)}`,
