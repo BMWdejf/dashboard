@@ -1264,3 +1264,32 @@ button.toggle:focus-visible {
   display: flex;
   justify-content: flex-end;
 }
+
+.feedLink {
+  color: var(--color-link);
+}
+
+.feedLink:hover {
+  text-decoration: underline;
+}
+
+.feedLink:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.feedValue,
+.feedDiffers {
+  color: var(--color-text);
+}
+
+.feedDiffers {
+  box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+.feedDiffersTag {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-subtle);
+  font-size: 11px;
+}

@@ -256,6 +256,23 @@ export async function getProductDetail(id: string, now = new Date()) {
       odberatele: { include: { firma: { select: { kod: true, nazev: true } } }, take: 50 },
       dodavatele: { include: { firma: { select: { kod: true, nazev: true } } }, take: 50 },
       prilohy: { orderBy: [{ hlavni: 'desc' }, { nazevSouboru: 'asc' }] },
+      // Supplier feed items paired with the product, items still in the feed first.
+      supplierItems: {
+        select: {
+          kod: true,
+          nazev: true,
+          nakupCena: true,
+          cenaBezna: true,
+          szbDph: true,
+          sumStavMj: true,
+          kategorie: true,
+          lastSeenAt: true,
+          removedAt: true,
+          feed: { select: { id: true, name: true, lastImportAt: true, lastImportStatus: true, lastImportStats: true } },
+        },
+        orderBy: [{ removedAt: { sort: 'desc', nulls: 'first' } }, { lastSeenAt: 'desc' }],
+        take: 10,
+      },
     },
   });
 }
