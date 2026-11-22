@@ -48,7 +48,7 @@ export async function DashboardShell({ user, active, flush = false, children }: 
     { label: t.nav.orders },
     { label: t.nav.sync },
     { label: t.nav.scraping },
-    { label: t.nav.integrations },
+    { href: '/integrations', label: t.nav.integrations },
   ];
   const footerItems: NavItem[] = [
     {

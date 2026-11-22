@@ -82,6 +82,32 @@ export const apiEnv = z.object({
 });
 export type ApiEnv = z.infer<typeof apiEnv>;
 
+/**
+ * Pre-flight checks of new integrations (apps/api /integrations/checks).
+ * A Flexi check may reach private networks (a self-hosted server on the LAN)
+ * only when this is explicitly "true"; otherwise any signed-in user could use
+ * it to probe the API host's network.
+ */
+export const integrationChecksEnv = z.object({
+  FLEXI_CHECK_ALLOW_PRIVATE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+});
+export type IntegrationChecksEnv = z.infer<typeof integrationChecksEnv>;
+
+/**
+ * Supplier XML feeds: the API process imports due feeds every minute unless
+ * this is "false" (e.g. when a cron calls GET /supplier-feeds/cron instead).
+ */
+export const supplierFeedEnv = z.object({
+  SUPPLIER_FEED_SCHEDULER: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+});
+export type SupplierFeedEnv = z.infer<typeof supplierFeedEnv>;
+
 /** Neon Postgres (`dashboard` database). Runtime uses the pooled URL. */
 export const dbEnv = z.object({
   DATABASE_URL: z.url(),

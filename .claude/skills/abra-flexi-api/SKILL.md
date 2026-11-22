@@ -100,6 +100,37 @@ An evidence's fields are listed by the server itself at
   `last_update` is Flexi's own change time: a sync never changes it, `synced_at`
   does. Flexi 4xx errors come back as 422 with Flexi's messages.
 
+## Supplier feed items → Flexi (`/integrations/feeds/[id]`)
+
+- Pure rules: `packages/core/sync/src/supplier-feed/to-flexi.ts` (also
+  `@repo/core-sync/feed-flexi` for the web). API: `FeedFlexiService`,
+  `POST /supplier-feeds/:id/flexi/create` and `/flexi/update`.
+- A new product: `id: ext:FEED:<supplier_feed_item.id>`, `kod` suggested as
+  `NAZEV_BEZ_DIAKRITIKY_<KOD DODAVATELE>` (≤ 64, editable before the write),
+  `typZasoby.zbozi`, `skladove`, price = the feed's retail price incl. VAT
+  (`typCeny.sDph` + `cenaZakl`), VAT 21 → `dphZakl`, 12 → `dphSniz`.
+- `check: true` is always a dry run; otherwise `FLEXI_DRY_RUN` decides. Only a
+  human click writes; the scheduler never does.
+- A PUT is atomic: one bad record and nothing of the request is saved. Failed
+  records come back in `results[]` with `request-id` = the id we sent;
+  `FlexiApiError.results` keeps them. The rest of that chunk is `batchFailed`.
+- After a real write, `syncProductsByIds` reads the products into the mirror
+  (`id in (…)`) and new ones are paired (`supplier_feed_item.cenik_id`).
+- Updates compare the feed with the mirrored product (`feedItemChanges`); a value
+  missing in the feed never clears Flexi's.
+- Feed images go as link attachments nested in the product:
+  `prilohy: [{ id: ext:FEEDIMG:<item id>:<url hash>, nazSoub, contentType, link,
+  linkPicture }]`. `priloha.typK` and `priloha.cenik` aren't writable; Flexi
+  sets `typPrilohy.odkaz` itself from `link`. Only links the product doesn't
+  have yet are sent ("Obrázky" on the changes tab); the first is main only if
+  the product has no main attachment. `syncProductsByIds` also reads
+  `priloha` with the path filter `(cenik in (…))` (a `filter=` query
+  parameter is ignored by Flexi).
+- We never create `skladova-karta`. Flexi itself adds a card for a new stock
+  item in every warehouse that has "Nové zboží automaticky přidat na tento
+  sklad" on, so one product can show up in the stock-card list once per
+  warehouse. That is not a duplicate: count `cenik` rows by `kod` to check.
+
 ## Evidences we use
 
 | Evidence | What | Notes |

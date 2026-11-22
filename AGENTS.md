@@ -8,7 +8,15 @@ A Turborepo monorepo (pnpm workspaces):
 - `apps/api`: NestJS API (built with SWC, tested with Jest). Serves `/links` and
   `/sync/flexi` (Flexi → Neon product mirror; needs `SYNC_API_TOKEN`) and
   `/products/:flexiId` (product edits to Flexi, dry-run unless `FLEXI_DRY_RUN=false`;
-  the web app calls it with `API_URL` + `SYNC_API_TOKEN`). Manual run:
+  the web app calls it with `API_URL` + `SYNC_API_TOKEN`), and
+  `/integrations/checks/{flexi,shoptet,feed}` (read-only pre-flight checks for
+  /integrations/new; public addresses only, a LAN Flexi needs
+  `FLEXI_CHECK_ALLOW_PRIVATE=true`), and `/supplier-feeds` (supplier XML feeds:
+  mapping preview, save, import into `supplier_feed_item`; due feeds are imported
+  every minute unless `SUPPLIER_FEED_SCHEDULER=false`, or via
+  `GET /supplier-feeds/cron`; items go to Flexi by hand from
+  `/integrations/feeds/[id]` via `/supplier-feeds/:id/flexi/{create,update}`,
+  dry-run unless `FLEXI_DRY_RUN=false`). Manual run:
   `pnpm --filter api sync:flexi [--full]`.
 - `packages/api`: shared DTOs and entities (`@repo/api`).
 - `packages/ui`: shared React components (`@repo/ui`).
@@ -25,8 +33,10 @@ A Turborepo monorepo (pnpm workspaces):
     `prisma/migrations`, and query functions. `examples_data` holds the
     dashboard's example data (`getDashboardExamples()`); reseed it with
     `pnpm --filter @repo/core-db db:seed-examples`.
-  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions, and the
-    Flexi → Neon mirror sync (`flexi-mirror/`).
+  - `sync` (`@repo/core-sync`): pure Shoptet → Flexi mapping functions, the
+    Flexi → Neon mirror sync (`flexi-mirror/`), and supplier XML feeds
+    (`supplier-feed/`: streaming item parser, tag → column mapping; the pure
+    mapping is also exported as `@repo/core-sync/feed-mapping` for the web).
   - `scraper` (`@repo/core-scraper`): Playwright runner (host allow-list,
     robots.txt, delays, schema validation) and per-site extractors.
 
@@ -86,6 +96,10 @@ Then add `NEON_AUTH_COOKIE_SECRET` (`openssl rand -base64 32`) to
 `dashboard` database (`neon connection-string main --database-name dashboard
 [--pooled]`) to the root `.env.local`. The branch has several databases, so
 `neon env pull` can't pick the database itself.
+
+For the web → API calls (/integrations/new checks, product edits, sync), add
+the same `SYNC_API_TOKEN` (`openssl rand -hex 32`) to both the root
+`.env.local` (read by `pnpm --filter api dev`) and `apps/web/.env.local`.
 
 ## Dev servers
 

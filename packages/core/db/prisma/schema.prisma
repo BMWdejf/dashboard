@@ -287,6 +287,7 @@ model FlexiCenik {
   prilohy       FlexiCenikPriloha[]
   stavHistorie  FlexiCenikStavHistorie[]
   shoptet       ShoptetProductSettings?
+  supplierItems SupplierFeedItem[]
 
   // Ve Flexi je kod jednoznačný. Pokud firma používá "režim individuálních kódů
   // ceníkových položek", tento unikátní index odstraň.
@@ -542,4 +543,91 @@ model ShoptetProductSettings {
   cenik FlexiCenik @relation(fields: [cenikId], references: [id], onDelete: Cascade)
 
   @@map("shoptet_product_settings")
+}
+
+/// A supplier's XML feed (Heureka, Zboží.cz, Google Merchant, …) and how its
+/// tags map to our columns. Several feeds, one per supplier URL.
+model SupplierFeed {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @db.VarChar(200)
+  url         String  @unique(map: "supplier_feed_url_uq")
+  /// FeedDialect from @repo/core-sync (shopitem, zbozi, google, mergado, custom).
+  dialect     String  @db.VarChar(20)
+  /// The repeating element that holds one product (SHOPITEM, item, entry, …).
+  itemElement String  @map("item_element") @db.VarChar(200)
+  /// Tag → target column ({ "ITEM_ID": "kod", "PARAM[Barva]": "atribut" });
+  /// tags left out are not imported. Validated by validateFeedMapping.
+  mapping     Json
+
+  /// Minutes between automatic imports; null = only by hand.
+  importIntervalMinutes Int?      @map("import_interval_minutes")
+  nextImportAt          DateTime? @map("next_import_at") @db.Timestamptz(6)
+  lastImportAt          DateTime? @map("last_import_at") @db.Timestamptz(6)
+  /// running | success | failed
+  lastImportStatus      String?   @map("last_import_status") @db.VarChar(20)
+  /// Safe to show: JSON { code, params? } of a check code (httpStatus, malformed, …),
+  /// never an upstream body.
+  lastImportError       String?   @map("last_import_error")
+  /// Counts of the last import ({ items, written, removed, skipped, … }).
+  lastImportStats       Json?     @map("last_import_stats")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Neon Auth user id of whoever connected the feed.
+  createdBy String?  @map("created_by")
+
+  items SupplierFeedItem[]
+
+  @@index([nextImportAt], map: "supplier_feed_next_import_idx")
+  @@map("supplier_feed")
+}
+
+/// One product of a supplier feed, in columns named like flexi_cenik. Written
+/// only by the feed import; pairing with our product (cenik_id) happens on the
+/// Products page.
+model SupplierFeedItem {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feedId String @map("feed_id") @db.Uuid
+  /// The supplier's product code (the mapping's primary key).
+  kod    String @db.VarChar(255)
+
+  nazev          String?  @db.VarChar(255)
+  eanKod         String?  @map("ean_kod") @db.VarChar(64)
+  kodVyrobce     String?  @map("kod_vyrobce") @db.VarChar(255)
+  vyrobce        String?  @db.VarChar(255)
+  popis          String?
+  kratkyPopis    String?  @map("kratky_popis")
+  /// Recommended retail price incl. VAT (Heureka PRICE_VAT).
+  cenaBezna      Decimal? @map("cena_bezna") @db.Decimal(20, 6)
+  nakupCena      Decimal? @map("nakup_cena") @db.Decimal(20, 6)
+  szbDph         Decimal? @map("szb_dph") @db.Decimal(5, 2)
+  sumStavMj      Decimal? @map("sum_stav_mj") @db.Decimal(18, 6)
+  /// Days; 0 = in stock at the supplier.
+  dodaciLhuta    Decimal? @map("dodaci_lhuta") @db.Decimal(10, 2)
+  hmotnostNetto  Decimal? @map("hmotnost_netto") @db.Decimal(18, 6)
+  kategorie      String?
+  url            String?
+  obrazky        String[] @default([])
+  /// Variant group (Heureka ITEMGROUP_ID).
+  skupinaVariant String?  @map("skupina_variant") @db.VarChar(255)
+  /// Parameter name → value ({ "Barva": "černá" }).
+  atributy       Json     @default("{}")
+  /// Every tag of the item, mapped or not: tag → values.
+  raw            Json
+
+  /// Our product, once paired by hand on the Products page.
+  cenikId String? @map("cenik_id") @db.Uuid
+
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  /// Set when the item is no longer in the feed; cleared if it comes back.
+  removedAt   DateTime? @map("removed_at") @db.Timestamptz(6)
+
+  feed  SupplierFeed @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  cenik FlexiCenik?  @relation(fields: [cenikId], references: [id], onDelete: SetNull)
+
+  @@unique([feedId, kod], map: "supplier_feed_item_feed_kod_uq")
+  @@index([eanKod], map: "supplier_feed_item_ean_idx")
+  @@index([cenikId], map: "supplier_feed_item_cenik_idx")
+  @@map("supplier_feed_item")
 }

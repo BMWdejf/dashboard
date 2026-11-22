@@ -55,6 +55,26 @@ This skill holds **this project's** rules.
   and buttons that would write or start a sync are disabled with a tooltip.
   The export has no styles below the card level: table cells, pills and badges
   use the theme tokens.
+- **Integrations** (`/integrations`, `integrations.json`, 1280×1377): measured
+  in the browser at 1280 (top bar 916×80, KPI cards 208×208 with gap 28, table
+  card at y 400, status strip 84). The template's eight sample rows (Stripe,
+  WooCommerce, Heureka…) and telemetry (memory, queue depth, cluster) were
+  replaced with what exists: ABRA Flexi (sync runs from `flexi_sync_run`,
+  mirrored product count), Shoptet and the supplier XML feed ("Nepřipojeno").
+  Data: `getIntegrationsOverview()` in `@repo/core-db`. "Synchronizovat vše"
+  starts `POST /sync/flexi` through the API (read-only for Flexi); "Přidat
+  integraci" is disabled with a tooltip. The table fits the 916 card instead of
+  the design's 1290 sideways scroll; filter pills are links (`?type=`).
+- **Add integration** (`/integrations/new`): a chooser (REST API / Shop / XML
+  feed) and `/integrations/new/[kind]` built from `Configuration Flexibe Data
+  REST API integration.json` and `Configuration XML feed Data integration.json`
+  (Shoptet reuses the REST API layout; it has no frame). "Test" runs real
+  read-only checks through the API (`POST /integrations/checks/:kind`, logic in
+  `@repo/core-sync` `checks/`, connections pinned to checked addresses with an
+  undici `Agent`; a LAN Flexi needs `FLEXI_CHECK_ALLOW_PRIVATE=true`); nothing is saved, so save stays disabled and a
+  good test shows the env lines to set. Dropped from the design as untrue for
+  this app: the static gateway IP and its checkbox, AES-256/HSM storage claims
+  and the base currency select (no setting uses it).
 - **Source of truth**: the pages `Screens` (finished screens) and
   `Components` (the library). Frames in other pages are drafts. Don't build
   from them unless the task links one explicitly.

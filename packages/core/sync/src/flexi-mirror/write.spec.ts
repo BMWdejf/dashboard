@@ -5,6 +5,7 @@ import {
   buildCenikUpdate,
   productChangesSchema,
   syncOneProduct,
+  syncProductsByIds,
 } from './write';
 
 describe('productChangesSchema', () => {
@@ -84,14 +85,15 @@ describe('syncOneProduct', () => {
     'ucetObdobi@ref': '/c/demo/ucetni-obdobi/8.json',
     stavMJ: '60.0',
   };
-  const attachment = {
-    id: '14',
+  const link = {
+    id: '31',
     cenik: 'code:BZ_2',
     'cenik@ref': '/c/demo/cenik/2.json',
-    nazSoub: 'foto.jpg',
+    nazSoub: 'example.com - 1.jpg',
+    contentType: 'image/jpeg',
     typK: 'typPrilohy.odkaz',
     mainAttachment: 'true',
-    link: 'https://cdn.example.com/foto.jpg',
+    link: 'https://example.com/1.jpg',
   };
 
   function setup(found = true) {
@@ -99,7 +101,7 @@ describe('syncOneProduct', () => {
       cenik: found ? [product] : [],
       'ucetni-obdobi': [period],
       'skladova-karta': [card],
-      priloha: [attachment],
+      priloha: [link],
     };
     const list = jest.fn(
       async (evidence: string, _o?: { filter?: string }) => ({
@@ -142,7 +144,7 @@ describe('syncOneProduct', () => {
     expect(store.upsert).toHaveBeenCalledWith('priloha', [
       expect.objectContaining({
         hlavni: true,
-        odkaz: 'https://cdn.example.com/foto.jpg',
+        odkaz: 'https://example.com/1.jpg',
       }),
     ]);
     expect(store.refreshStock).toHaveBeenCalledWith(8, NOW);
@@ -172,5 +174,22 @@ describe('syncOneProduct', () => {
       'run-1',
       expect.objectContaining({ status: 'failed' }),
     );
+  });
+
+  it('reads several products and their attachments in filtered calls, skipping duplicates', async () => {
+    const { flexi, store, list } = setup();
+    await expect(
+      syncProductsByIds({ flexi, store, flexiIds: [2, 2, 3] }),
+    ).resolves.toBe(1);
+    expect(list.mock.calls.map((c) => [c[0], c[1]?.filter])).toEqual([
+      ['cenik', 'id in (2,3)'],
+      ['priloha', 'cenik in (2,3)'],
+    ]);
+    expect(store.upsert).toHaveBeenCalledWith('priloha', [
+      expect.objectContaining({
+        flexiId: 31,
+        odkaz: 'https://example.com/1.jpg',
+      }),
+    ]);
   });
 });

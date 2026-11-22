@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SHOP>
+<SHOPITEM>
+    <ITEM_ID>142</ITEM_ID>
+    <PRODUCTNAME>Nepropustný chránič 220x200 cm</PRODUCTNAME>
+    <PRODUCT>Nepropustný chránič 220x200 cm</PRODUCT>
+    <DESCRIPTION><![CDATA[<p><strong>Prodyšný</strong> chránič&nbsp;matrace</p>]]></DESCRIPTION>
+    <URL>https://dodavatel.example/chranic-220/</URL>
+    <IMGURL>https://cdn.example/142-0.jpg</IMGURL>
+    <IMGURL_ALTERNATIVE>https://cdn.example/142-1.jpg</IMGURL_ALTERNATIVE>
+    <IMGURL_ALTERNATIVE>https://cdn.example/142-2.jpg</IMGURL_ALTERNATIVE>
+    <PRICE_VAT>489,00</PRICE_VAT>
+    <VAT>21%</VAT>
+    <CATEGORYTEXT>Chrániče matrací</CATEGORYTEXT>
+    <ITEMGROUP_ID>142</ITEMGROUP_ID>
+    <PARAM>
+        <PARAM_NAME>Velikost</PARAM_NAME>
+        <VAL>220x200</VAL>
+    </PARAM>
+    <PARAM>
+        <PARAM_NAME>Barva</PARAM_NAME>
+        <VAL>bílá</VAL>
+    </PARAM>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+    <DELIVERY>
+        <DELIVERY_ID>GLS</DELIVERY_ID>
+        <DELIVERY_PRICE>115,00</DELIVERY_PRICE>
+    </DELIVERY>
+    <ACCESSORY>145</ACCESSORY>
+    <ACCESSORY>148</ACCESSORY>
+</SHOPITEM>
+<SHOPITEM>
+    <ITEM_ID>145</ITEM_ID>
+    <PRODUCTNAME>Povlak 70x90 cm</PRODUCTNAME>
+    <URL>https://dodavatel.example/povlak/</URL>
+    <IMGURL>https://cdn.example/145.jpg</IMGURL>
+    <PRICE_VAT>1 299,50</PRICE_VAT>
+    <VAT>21%</VAT>
+    <CATEGORYTEXT>Povlečení</CATEGORYTEXT>
+    <ITEMGROUP_ID>145</ITEMGROUP_ID>
+    <PARAM>
+        <PARAM_NAME>velikost</PARAM_NAME>
+        <VAL>70x90</VAL>
+    </PARAM>
+    <DELIVERY_DATE>3</DELIVERY_DATE>
+</SHOPITEM>
+<SHOPITEM>
+    <ITEM_ID>145</ITEM_ID>
+    <PRODUCTNAME>Duplicitní kód</PRODUCTNAME>
+    <PRICE_VAT>na dotaz</PRICE_VAT>
+</SHOPITEM>
+<SHOPITEM>
+    <PRODUCTNAME>Bez kódu</PRODUCTNAME>
+</SHOPITEM>
+</SHOP>

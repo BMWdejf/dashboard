@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm build && concurrently -k \"swc src -d dist --strip-leading-paths --watch\" \"node --watch dist/main.js\"",
+    "dev": "pnpm build && concurrently -k \"swc src -d dist --strip-leading-paths --watch\" \"node --env-file-if-exists=../../.env.local --watch dist/main.js\"",
     "build": "swc src -d dist --strip-leading-paths",
     "check-types": "tsc --noEmit -p tsconfig.build.json",
     "start": "node dist/main",
@@ -27,7 +27,8 @@
     "@repo/core-sync": "workspace:*",
     "escape-html": "1.0.3",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "undici": "8.9.0"
   },
   "devDependencies": {
     "@jest/globals": "30.5.2",
