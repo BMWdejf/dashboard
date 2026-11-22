@@ -7,8 +7,18 @@ import {
   MIRROR_EVIDENCES,
   type MirrorEvidence,
 } from './evidences';
-import { mapRecords, type FlexiRecord, type MirrorRows, type UcetniObdobiRow } from './map';
-import { MOVEMENT_DETAIL, MOVEMENT_EVIDENCE, movementDeltas, type MovementDelta } from './movements';
+import {
+  mapRecords,
+  type FlexiRecord,
+  type MirrorRows,
+  type UcetniObdobiRow,
+} from './map';
+import {
+  MOVEMENT_DETAIL,
+  MOVEMENT_EVIDENCE,
+  movementDeltas,
+  type MovementDelta,
+} from './movements';
 
 /** The part of FlexiClient the sync needs (read-only). */
 export interface MirrorFlexiReader {
@@ -19,7 +29,11 @@ export interface MirrorFlexiReader {
   changes(opts?: {
     start?: number;
     limit?: number;
-  }): Promise<{ changes: FlexiChange[]; globalVersion?: number; next?: number }>;
+  }): Promise<{
+    changes: FlexiChange[];
+    globalVersion?: number;
+    next?: number;
+  }>;
 }
 
 export interface SyncCursor {
@@ -49,6 +63,8 @@ export interface SyncCounts {
   changes?: 'baseline' | 'read' | 'unavailable';
   /** First mapping errors, for the run log. */
   errors: string[];
+  /** Set when the run read a single product (its Flexi id). */
+  product?: number;
 }
 
 /** Writes the mirror. Implemented in @repo/core-db (createFlexiMirrorStore). */
@@ -60,7 +76,11 @@ export interface MirrorStore {
   /** Flexi ids currently in the mirror (for reconciling deletes in a full run). */
   listFlexiIds(evidence: MirrorEvidence): Promise<number[]>;
   /** A product is marked deleted (kept for history); other rows are removed. */
-  applyDeletes(evidence: MirrorEvidence, flexiIds: number[], at: Date): Promise<number>;
+  applyDeletes(
+    evidence: MirrorEvidence,
+    flexiIds: number[],
+    at: Date,
+  ): Promise<number>;
   /**
    * Recomputes each product's stock totals from its cards in the given period and
    * appends a history row where the total changed. Returns history rows written.
@@ -78,7 +98,11 @@ export interface MirrorStore {
   startRun(trigger: SyncTrigger): Promise<string>;
   finishRun(
     id: string,
-    result: { status: 'success' | 'failed'; counts: SyncCounts; error?: string },
+    result: {
+      status: 'success' | 'failed';
+      counts: SyncCounts;
+      error?: string;
+    },
   ): Promise<void>;
 }
 
@@ -112,7 +136,9 @@ const CHANGES_KEY = 'changes';
 
 /** `YYYY-MM-DD` of `at` in Prague (accounting periods are calendar dates there). */
 export function pragueDate(at: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(at);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(
+    at,
+  );
 }
 
 /** The period that contains `today` (`YYYY-MM-DD`), if any. */
@@ -124,9 +150,13 @@ export function currentPeriod(
 }
 
 /** Flexi filter expression joining the parts with `and`. */
-export function buildFilter(parts: (string | undefined | null)[]): string | undefined {
+export function buildFilter(
+  parts: (string | undefined | null)[],
+): string | undefined {
   const p = parts.filter((x): x is string => !!x);
-  return p.length ? p.map((x) => (p.length > 1 ? `(${x})` : x)).join(' and ') : undefined;
+  return p.length
+    ? p.map((x) => (p.length > 1 ? `(${x})` : x)).join(' and ')
+    : undefined;
 }
 
 /** Message safe to store and show: no URLs (they could carry credentials). */
@@ -144,7 +174,9 @@ export function safeError(e: unknown): string {
  * 3. Product stock totals recomputed from the cards; history row on change.
  * 4. Deletes from the Changes API (or, in a full run, by comparing ids).
  */
-export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<MirrorSyncResult> {
+export async function runFlexiMirrorSync(
+  opts: MirrorSyncOptions,
+): Promise<MirrorSyncResult> {
   const { flexi, store, full = false } = opts;
   const now = opts.now ?? (() => new Date());
   const log = opts.log ?? (() => {});
@@ -154,7 +186,13 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
   const runId = await store.startRun(opts.trigger);
 
   const tally = (e: MirrorEvidence): EvidenceCounts =>
-    (counts.evidences[e] ??= { fetched: 0, written: 0, skipped: 0, invalid: 0, deleted: 0 });
+    (counts.evidences[e] ??= {
+      fetched: 0,
+      written: 0,
+      skipped: 0,
+      invalid: 0,
+      deleted: 0,
+    });
 
   /** Reads one evidence (all pages), writes it, returns the mapped rows' max lastUpdate. */
   async function syncEvidence<E extends MirrorEvidence>(
@@ -178,7 +216,8 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
       const mapped = mapRecords(evidence, rows);
       t.invalid += mapped.errors.length;
       for (const err of mapped.errors) {
-        if (counts.errors.length < MAX_LOGGED_ERRORS) counts.errors.push(err.message);
+        if (counts.errors.length < MAX_LOGGED_ERRORS)
+          counts.errors.push(err.message);
       }
       if (mapped.rows.length) {
         const w = await store.upsert(evidence, mapped.rows);
@@ -187,40 +226,67 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
       }
       for (const row of mapped.rows) {
         seenIds.push(row.flexiId);
-        if (row.lastUpdate && (!maxLastUpdate || row.lastUpdate > maxLastUpdate)) {
+        if (
+          row.lastUpdate &&
+          (!maxLastUpdate || row.lastUpdate > maxLastUpdate)
+        ) {
           maxLastUpdate = row.lastUpdate;
         }
         collect?.push(row);
       }
       if (rows.length < pageSize) break;
     }
-    log(`${evidence}: ${t.fetched} read, ${t.written} written, ${t.skipped} skipped`);
+    log(
+      `${evidence}: ${t.fetched} read, ${t.written} written, ${t.skipped} skipped`,
+    );
     return { maxLastUpdate, seenIds };
   }
 
   /** Full run: whatever the mirror has but Flexi didn't return is gone in Flexi. */
   async function reconcile(evidence: MirrorEvidence, seenIds: number[]) {
     const seen = new Set(seenIds);
-    const missing = (await store.listFlexiIds(evidence)).filter((id) => !seen.has(id));
-    if (missing.length) tally(evidence).deleted += await store.applyDeletes(evidence, missing, now());
+    const missing = (await store.listFlexiIds(evidence)).filter(
+      (id) => !seen.has(id),
+    );
+    if (missing.length)
+      tally(evidence).deleted += await store.applyDeletes(
+        evidence,
+        missing,
+        now(),
+      );
   }
 
-  async function incremental(evidence: MirrorEvidence, key: string, extra?: string) {
+  async function incremental(
+    evidence: MirrorEvidence,
+    key: string,
+    extra?: string,
+  ) {
     const cursor = full ? null : await store.getCursor(key);
-    const since = cursor?.lastUpdate ? `lastUpdate gte '${cursor.lastUpdate.toISOString()}'` : undefined;
-    const { maxLastUpdate, seenIds } = await syncEvidence(evidence, [extra, since]);
-    if (full && evidence !== 'skladova-karta') await reconcile(evidence, seenIds);
-    if (maxLastUpdate) await store.setCursor(key, { lastUpdate: maxLastUpdate });
+    const since = cursor?.lastUpdate
+      ? `lastUpdate gte '${cursor.lastUpdate.toISOString()}'`
+      : undefined;
+    const { maxLastUpdate, seenIds } = await syncEvidence(evidence, [
+      extra,
+      since,
+    ]);
+    if (full && evidence !== 'skladova-karta')
+      await reconcile(evidence, seenIds);
+    if (maxLastUpdate)
+      await store.setCursor(key, { lastUpdate: maxLastUpdate });
   }
 
   try {
     // 1. Code lists, whole every time.
     const periods: UcetniObdobiRow[] = [];
-    for (const evidence of MIRROR_EVIDENCES.filter((e) => FULL_EVIDENCES.has(e))) {
+    for (const evidence of MIRROR_EVIDENCES.filter((e) =>
+      FULL_EVIDENCES.has(e),
+    )) {
       const { seenIds } = await syncEvidence(
         evidence,
         [],
-        evidence === 'ucetni-obdobi' ? (periods as MirrorRows[typeof evidence][]) : undefined,
+        evidence === 'ucetni-obdobi'
+          ? (periods as MirrorRows[typeof evidence][])
+          : undefined,
       );
       if (full) await reconcile(evidence, seenIds);
     }
@@ -233,12 +299,23 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
     if (period) {
       counts.period = period.kod;
       // A new period starts with its own cursor.
-      await incremental('skladova-karta', `skladova-karta:${period.kod}`, `ucetObdobi = 'code:${period.kod}'`);
+      await incremental(
+        'skladova-karta',
+        `skladova-karta:${period.kod}`,
+        `ucetObdobi = 'code:${period.kod}'`,
+      );
     } else {
-      counts.errors.push(`No accounting period covers ${pragueDate(startedAt)}; stock cards skipped.`);
+      counts.errors.push(
+        `No accounting period covers ${pragueDate(startedAt)}; stock cards skipped.`,
+      );
     }
 
-    for (const evidence of ['atribut', 'odberatel', 'dodavatel', 'priloha'] as const) {
+    for (const evidence of [
+      'atribut',
+      'odberatel',
+      'dodavatel',
+      'priloha',
+    ] as const) {
       await incremental(evidence, evidence);
     }
 
@@ -246,10 +323,15 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
     if (!full) await readDeletes();
 
     // 4. Stock totals and history.
-    if (period) counts.stockHistoryRows = await store.refreshStock(period.flexiId, now());
+    if (period)
+      counts.stockHistoryRows = await store.refreshStock(period.flexiId, now());
 
     // 5. Once: rebuild the history backwards from stock movements.
-    if (period && (opts.backfillHistoryDays !== undefined || !(await store.getCursor(BACKFILL_KEY)))) {
+    if (
+      period &&
+      (opts.backfillHistoryDays !== undefined ||
+        !(await store.getCursor(BACKFILL_KEY)))
+    ) {
       await backfillHistory(opts.backfillHistoryDays ?? DEFAULT_BACKFILL_DAYS);
     }
 
@@ -258,7 +340,9 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
   } catch (e) {
     const error = safeError(e);
     log(`sync failed: ${error}`);
-    await store.finishRun(runId, { status: 'failed', counts, error }).catch(() => {});
+    await store
+      .finishRun(runId, { status: 'failed', counts, error })
+      .catch(() => {});
     throw e;
   }
 
@@ -281,7 +365,9 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
     const rows = await store.backfillStockHistory(movementDeltas(lines), since);
     counts.historyBackfill = { since, movements: lines.length, rows };
     await store.setCursor(BACKFILL_KEY, { lastUpdate: now() });
-    log(`history backfill since ${since}: ${lines.length} movements, ${rows} rows`);
+    log(
+      `history backfill since ${since}: ${lines.length} movements, ${rows} rows`,
+    );
   }
 
   async function readDeletes() {
@@ -292,7 +378,9 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
         // First run: start reading from the current version.
         const head = await flexi.changes({ limit: 1 });
         if (head.globalVersion !== undefined) {
-          await store.setCursor(CHANGES_KEY, { changesVersion: head.globalVersion + 1 });
+          await store.setCursor(CHANGES_KEY, {
+            changesVersion: head.globalVersion + 1,
+          });
         }
         counts.changes = 'baseline';
         return;
@@ -305,14 +393,16 @@ export async function runFlexiMirrorSync(opts: MirrorSyncOptions): Promise<Mirro
         for (const c of changes.changes) {
           const v = Number(c['@in-version']);
           if (v >= start) start = v + 1;
-          if (c['@operation'] !== 'delete' || !mirrored.has(c['@evidence'])) continue;
+          if (c['@operation'] !== 'delete' || !mirrored.has(c['@evidence']))
+            continue;
           const ev = c['@evidence'] as MirrorEvidence;
           deletes.set(ev, [...(deletes.get(ev) ?? []), Number(c.id)]);
         }
         if (changes.next === undefined || changes.changes.length === 0) break;
         start = Math.max(start, changes.next);
       }
-      for (const [ev, ids] of deletes) tally(ev).deleted += await store.applyDeletes(ev, ids, now());
+      for (const [ev, ids] of deletes)
+        tally(ev).deleted += await store.applyDeletes(ev, ids, now());
       await store.setCursor(CHANGES_KEY, { changesVersion: start });
       counts.changes = 'read';
     } catch (e) {

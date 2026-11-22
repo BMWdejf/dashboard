@@ -187,8 +187,6 @@ export const cs = {
       breadcrumbProducts: 'Produkty',
       breadcrumbCurrent: 'Detail produktu',
       breadcrumbLabel: 'Drobečková navigace',
-      catalog: 'Katalog',
-      synced: 'Synchronizováno',
       notSynced: 'Nesynchronizováno',
       syncFailed: 'Synchronizace selhala',
       code: 'Kód',
