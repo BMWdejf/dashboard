@@ -7,7 +7,8 @@ services:
     plan: free
     region: frankfurt
     branch: master
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter "api..." -r build
+    # Render ships pnpm; `corepack enable` fails there (read-only /usr/bin).
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter "api..." -r build
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /
     buildFilter:
